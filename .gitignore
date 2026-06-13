@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment and local state
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
