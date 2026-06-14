@@ -2,7 +2,7 @@
 
 > 러닝 전후와 러닝 중, 주변 공공 음수대와 화장실을 빠르게 찾고 러닝 기록을 남기는 모바일 중심 웹앱
 
-[![Status](https://img.shields.io/badge/status-planning-6c63ff)](#roadmap)
+[![Status](https://img.shields.io/badge/status-in%20development-2563eb)](#roadmap)
 [![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178c6)](#tech-stack)
 [![Backend](https://img.shields.io/badge/backend-FastAPI%20%2B%20Python-009688)](#tech-stack)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
@@ -104,9 +104,9 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ### Phase 1: Foundation
 
-- [ ] React + TypeScript + Vite 초기화
-- [ ] FastAPI 초기화 및 health check
-- [ ] 프론트엔드와 백엔드 개발 환경 구성
+- [x] React + TypeScript + Vite 초기화
+- [x] FastAPI 초기화 및 health check
+- [x] 프론트엔드와 백엔드 개발 환경 구성
 
 ### Phase 2: Map and Public Data
 
@@ -147,7 +147,33 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ## Current Status
 
-기획, 사용자 흐름, `DESIGN.md`, 초기 UI 시안, 기술 스택 결정을 완료했습니다. 현재 개발 환경 구성과 지도 API·공공데이터 조사를 준비하고 있습니다.
+첫 번째 수직 기능으로 React 앱과 FastAPI의 `GET /api/health`를 연결했습니다. 프론트엔드는 TanStack Query로 로딩·성공·오류·재시도 상태를 표현하며, 다음 단계는 지도 API 선정과 현재 위치 표시입니다.
+
+## Local Development
+
+```bash
+# API
+python3 -m venv apps/api/.venv
+apps/api/.venv/bin/pip install -r apps/api/requirements.txt
+npm run dev:api
+
+# Web (새 터미널)
+npm --prefix apps/web install
+npm run dev:web
+```
+
+- Web: http://127.0.0.1:5173
+- API health: http://127.0.0.1:8000/api/health
+- API docs: http://127.0.0.1:8000/docs
+
+## Verification
+
+```bash
+npm run test:web
+npm run test:api
+npm run lint:web
+npm run build:web
+```
 
 ## License
 

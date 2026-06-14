@@ -1,0 +1,145 @@
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(100%, 480px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 64px 20px 32px;
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+.hero {
+  padding: 12px 4px 20px;
+}
+
+.eyebrow,
+.status-label {
+  margin: 0 0 10px;
+  color: #2563eb;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  max-width: 12ch;
+  margin: 0;
+  color: #101828;
+  font-size: clamp(2.4rem, 12vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.065em;
+}
+
+.hero-copy {
+  margin: 24px 0 0;
+  color: #667085;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.status-card,
+.next-card {
+  border: 1px solid #e4e7ec;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(16, 24, 40, 0.08);
+}
+
+.status-card {
+  position: relative;
+  padding: 24px;
+}
+
+.status-card h2,
+.next-card h2 {
+  margin: 0;
+  color: #101828;
+  font-size: 1.35rem;
+  letter-spacing: -0.035em;
+}
+
+.status-dot {
+  position: absolute;
+  top: 27px;
+  right: 24px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fdb022;
+  box-shadow: 0 0 0 6px rgba(253, 176, 34, 0.15);
+}
+
+.status-dot.is-online {
+  background: #12b76a;
+  box-shadow: 0 0 0 6px rgba(18, 183, 106, 0.15);
+}
+
+.status-dot.is-error {
+  background: #f04438;
+  box-shadow: 0 0 0 6px rgba(240, 68, 56, 0.15);
+}
+
+.status-details {
+  margin: 24px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.status-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.status-details dt {
+  color: #98a2b3;
+}
+
+.status-details dd {
+  margin: 0;
+  color: #344054;
+  font-weight: 700;
+}
+
+button {
+  width: 100%;
+  margin-top: 24px;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  background: #101828;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.next-card {
+  padding: 24px;
+  background: #101828;
+}
+
+.next-card .status-label {
+  color: #84adff;
+}
+
+.next-card h2 {
+  color: #ffffff;
+}
+
+.next-card p:last-child {
+  margin: 12px 0 0;
+  color: #98a2b3;
+  line-height: 1.6;
+}
+
+@media (min-width: 700px) {
+  .app-shell {
+    padding-top: 96px;
+  }
+}
