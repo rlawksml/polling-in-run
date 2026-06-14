@@ -34,6 +34,18 @@ declare namespace kakao.maps {
     setPosition(position: LatLng): void
   }
 
+  class CustomOverlay {
+    constructor(options: {
+      map: Map
+      position: LatLng
+      content: HTMLElement
+      xAnchor?: number
+      yAnchor?: number
+      zIndex?: number
+    })
+    setMap(map: Map | null): void
+  }
+
   function load(callback: () => void): void
 }
 

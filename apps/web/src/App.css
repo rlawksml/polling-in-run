@@ -118,6 +118,12 @@ button {
   font-size: 0.78rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(16, 24, 40, 0.1);
+  opacity: 0.55;
+}
+
+.facility-filter button.is-active {
+  opacity: 1;
+  outline: 2px solid rgba(37, 99, 235, 0.18);
 }
 
 .facility-icon {
@@ -136,6 +142,39 @@ button {
 }
 
 .facility-icon.restroom {
+  background: #101828;
+}
+
+.facility-status {
+  position: absolute;
+  z-index: 2;
+  top: 164px;
+  left: 20px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(16, 24, 40, 0.78);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+}
+
+.facility-marker {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.22);
+}
+
+.facility-marker.restroom {
   background: #101828;
 }
 

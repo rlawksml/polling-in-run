@@ -148,7 +148,7 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ## Current Status
 
-React 앱과 FastAPI의 첫 수직 기능에 이어 Kakao Maps 지도 렌더링과 현재 위치 상태를 구현했습니다. 서울시 공원 음수대 Open API와 공간데이터마켓 공중화장실 데이터를 조사했으며, 다음 단계는 샘플 시설 API와 지도 마커를 연결하는 것입니다.
+React 앱과 FastAPI의 첫 수직 기능에 이어 Kakao Maps 지도와 현재 위치 상태를 구현했습니다. 현재 FastAPI 공통 시설 모델의 샘플 음수대·화장실 4곳을 종류별 마커와 필터로 표시합니다. 다음 단계는 샘플 데이터를 서울 음수대 Open API 수집·캐시 결과로 교체하는 것입니다.
 
 ## Local Development
 

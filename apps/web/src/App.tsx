@@ -1,3 +1,6 @@
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { getFacilities, type FacilityType } from './api/facilities'
 import { KakaoMap } from './components/KakaoMap'
 import { useCurrentLocation } from './hooks/use-current-location'
 import './App.css'
@@ -13,6 +16,14 @@ const locationMessages = {
 }
 
 function App() {
+  const facilities = useQuery({
+    queryKey: ['facilities'],
+    queryFn: getFacilities,
+  })
+  const [visibleTypes, setVisibleTypes] = useState<FacilityType[]>([
+    'water',
+    'restroom',
+  ])
   const { location, requestLocation, status } = useCurrentLocation()
   const hasLocationError = [
     'denied',
@@ -20,10 +31,21 @@ function App() {
     'timeout',
     'unsupported',
   ].includes(status)
+  const visibleFacilities = (facilities.data ?? []).filter((facility) =>
+    visibleTypes.includes(facility.type),
+  )
+
+  const toggleFacilityType = (type: FacilityType) => {
+    setVisibleTypes((current) =>
+      current.includes(type)
+        ? current.filter((currentType) => currentType !== type)
+        : [...current, type],
+    )
+  }
 
   return (
     <main className="app-shell">
-      <KakaoMap location={location} />
+      <KakaoMap facilities={visibleFacilities} location={location} />
 
       <header className="top-bar">
         <div>
@@ -36,19 +58,35 @@ function App() {
       </header>
 
       <section className="facility-filter" aria-label="편의시설 필터">
-        <button type="button">
+        <button
+          className={visibleTypes.includes('water') ? 'is-active' : ''}
+          type="button"
+          aria-pressed={visibleTypes.includes('water')}
+          onClick={() => toggleFacilityType('water')}
+        >
           <span className="facility-icon water" aria-hidden="true">
             W
           </span>
           음수대
         </button>
-        <button type="button">
+        <button
+          className={visibleTypes.includes('restroom') ? 'is-active' : ''}
+          type="button"
+          aria-pressed={visibleTypes.includes('restroom')}
+          onClick={() => toggleFacilityType('restroom')}
+        >
           <span className="facility-icon restroom" aria-hidden="true">
             R
           </span>
           화장실
         </button>
       </section>
+
+      <div className="facility-status" aria-live="polite">
+        {facilities.isPending && '시설 정보를 불러오는 중'}
+        {facilities.isSuccess && `샘플 시설 ${visibleFacilities.length}곳 표시 중`}
+        {facilities.isError && '시설 정보를 불러오지 못했어요'}
+      </div>
 
       <section className={`location-card ${hasLocationError ? 'is-error' : ''}`}>
         <div>

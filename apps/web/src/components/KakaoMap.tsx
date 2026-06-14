@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Facility } from '../api/facilities'
 import type { CurrentLocation } from '../hooks/use-current-location'
 import { loadKakaoMaps } from '../lib/kakao-maps'
 
 type KakaoMapProps = {
+  facilities: Facility[]
   location: CurrentLocation | null
 }
 
@@ -11,10 +13,11 @@ const SEOUL_CITY_HALL = {
   longitude: 126.978,
 }
 
-export function KakaoMap({ location }: KakaoMapProps) {
+export function KakaoMap({ facilities, location }: KakaoMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const markerRef = useRef<kakao.maps.Marker | null>(null)
+  const facilityOverlaysRef = useRef<kakao.maps.CustomOverlay[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
 
@@ -74,6 +77,40 @@ export function KakaoMap({ location }: KakaoMapProps) {
 
     mapRef.current.panTo(position)
   }, [isReady, location])
+
+  useEffect(() => {
+    facilityOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
+    facilityOverlaysRef.current = []
+
+    if (!isReady || !mapRef.current || !window.kakao?.maps) {
+      return
+    }
+
+    facilityOverlaysRef.current = facilities.map((facility) => {
+      const marker = document.createElement('button')
+      marker.type = 'button'
+      marker.className = `facility-marker ${facility.type}`
+      marker.setAttribute('aria-label', facility.name)
+      marker.textContent = facility.type === 'water' ? 'W' : 'R'
+
+      return new window.kakao!.maps.CustomOverlay({
+        map: mapRef.current!,
+        position: new window.kakao!.maps.LatLng(
+          facility.latitude,
+          facility.longitude,
+        ),
+        content: marker,
+        xAnchor: 0.5,
+        yAnchor: 1,
+        zIndex: 3,
+      })
+    })
+
+    return () => {
+      facilityOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
+      facilityOverlaysRef.current = []
+    }
+  }, [facilities, isReady])
 
   return (
     <div className="map-area">

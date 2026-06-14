@@ -1,10 +1,50 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 vi.mock('./components/KakaoMap', () => ({
-  KakaoMap: () => <div aria-label="현재 위치와 주변 편의시설 지도" />,
+  KakaoMap: ({ facilities }: { facilities: unknown[] }) => (
+    <div aria-label="현재 위치와 주변 편의시설 지도">
+      시설 {facilities.length}개
+    </div>
+  ),
 }))
+
+const facilityResponse = [
+  {
+    id: 'water-sample-1',
+    type: 'water',
+    name: '서울광장 음수대',
+    latitude: 37.5658,
+    longitude: 126.9773,
+    address: '서울특별시 중구 세종대로 110',
+    opening_hours: null,
+    source: 'sample',
+  },
+  {
+    id: 'restroom-sample-1',
+    type: 'restroom',
+    name: '서울도서관 화장실',
+    latitude: 37.5661,
+    longitude: 126.9779,
+    address: '서울특별시 중구 세종대로 110',
+    opening_hours: '09:00~21:00',
+    source: 'sample',
+  },
+]
+
+function renderApp() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>,
+  )
+}
 
 describe('App', () => {
   afterEach(() => {
@@ -13,6 +53,9 @@ describe('App', () => {
   })
 
   it('shows the current location and running actions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
     const getCurrentPosition = vi.fn((success: PositionCallback) => {
       success({
         coords: {
@@ -35,14 +78,19 @@ describe('App', () => {
       value: { getCurrentPosition },
     })
 
-    render(<App />)
+    renderApp()
 
     expect(await screen.findByText('현재 위치를 중심으로 지도를 보여드려요.')).toBeInTheDocument()
+    expect(await screen.findByText('샘플 시설 2곳 표시 중')).toBeInTheDocument()
+    expect(screen.getByText('시설 2개')).toBeInTheDocument()
     expect(screen.getByText('약 12m 정확도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
   })
 
   it('lets the user retry after denying location permission', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
     const getCurrentPosition = vi.fn(
       (_success: PositionCallback, error: PositionErrorCallback) => {
         error({
@@ -60,11 +108,28 @@ describe('App', () => {
       value: { getCurrentPosition },
     })
 
-    render(<App />)
+    renderApp()
 
     expect(await screen.findByText(/위치 권한이 꺼져 있어요/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
     expect(getCurrentPosition).toHaveBeenCalledTimes(2)
+  })
+
+  it('filters facilities by type', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+
+    renderApp()
+
+    expect(await screen.findByText('샘플 시설 2곳 표시 중')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '음수대' }))
+    expect(screen.getByText('샘플 시설 1곳 표시 중')).toBeInTheDocument()
   })
 })
