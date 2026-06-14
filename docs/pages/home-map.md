@@ -27,6 +27,7 @@
 - 지도는 화면의 대부분을 차지한다.
 - 러닝 시작 버튼은 한 손으로 누르기 쉬운 하단 영역에 둔다.
 - 시설 마커는 물과 화장실을 색상과 아이콘으로 동시에 구분한다.
+- 마커 선택 시 시설명, 거리, 주소, 화장실 개방시간 등 러닝 중 필요한 정보만 보여준다.
 - 오류 메시지가 지도 전체를 가리지 않게 한다.
 
 ## 완료 조건
@@ -39,4 +40,6 @@
 
 - [`카카오맵과 현재 위치`](../features/kakao-map-and-location.md)
 - [`주변 편의시설`](../features/facility-search.md)
+- [`서울시 공원 음수대`](../data-sources/seoul-park-water-fountains.md)
+- [`서울시 공중화장실`](../data-sources/seoul-public-restrooms.md)
 - [`러닝 추적`](../features/run-tracking.md)

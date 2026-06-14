@@ -113,7 +113,7 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 - [x] 지도 API 선정
 - [ ] 현재 위치 표시
-- [ ] 공공 음수대·화장실 데이터 조사
+- [x] 공공 음수대·화장실 데이터 조사
 - [ ] FastAPI 데이터 정규화 및 주변 시설 API
 
 ### Phase 3: Running Records
@@ -148,7 +148,7 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ## Current Status
 
-React 앱과 FastAPI의 첫 수직 기능에 이어, Kakao Maps SDK 로더와 현재 위치의 로딩·허용·거부·오류 상태를 구현했습니다. Kakao Developers 웹 도메인 등록 후 실제 지도와 사용자 마커를 최종 확인하고 주변 편의시설 데이터를 연결합니다.
+React 앱과 FastAPI의 첫 수직 기능에 이어 Kakao Maps 지도 렌더링과 현재 위치 상태를 구현했습니다. 서울시 공원 음수대 Open API와 공간데이터마켓 공중화장실 데이터를 조사했으며, 다음 단계는 샘플 시설 API와 지도 마커를 연결하는 것입니다.
 
 ## Local Development
 

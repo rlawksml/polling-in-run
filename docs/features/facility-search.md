@@ -15,6 +15,25 @@ FastAPI가 여러 공공데이터 원본을 공통 시설 모델로 정규화하
 → React 지도 마커
 ```
 
+## 확인한 데이터 소스
+
+### 서울시 공원 음수대
+
+- 서울 열린데이터광장 Open API `TbViewGisArisu`
+- 매주 갱신되며 위도·경도가 제공된다.
+- Polling In Run의 음수대 핵심 데이터 소스로 사용한다.
+- API가 HTTP로 제공되므로 FastAPI가 호출하고 결과를 캐시한다.
+
+상세: [`서울시 공원 음수대`](../data-sources/seoul-park-water-fountains.md)
+
+### 서울시 공중화장실
+
+- 공간데이터마켓의 승인형 ZIP/XLSX 다운로드 데이터다.
+- 공개 샘플에는 화장실명, 주소, 개방시간, 위도·경도가 포함된다.
+- 배포주기가 1년이므로 초기 시드와 모델 검증에 사용하고, 운영용 최신 데이터 출처를 추가 조사한다.
+
+상세: [`서울시 공중화장실`](../data-sources/seoul-public-restrooms.md)
+
 ## FastAPI를 두는 이유
 
 ### 장점
@@ -31,16 +50,39 @@ FastAPI가 여러 공공데이터 원본을 공통 시설 모델로 정규화하
 ## 공통 시설 모델 초안
 
 - `id`
+- `source`
+- `source_id`
 - `type`: `water` 또는 `restroom`
 - `name`
 - `latitude`
 - `longitude`
 - `address`
-- `source`
-- `updated_at`
+- `road_address`
+- `opening_hours`
+- `details`
+- `source_updated_at`
+- `synced_at`
+
+## 주변 시설 API 초안
+
+```http
+GET /api/facilities?latitude=37.5665&longitude=126.9780&radius_m=3000&type=water,restroom
+```
+
+응답은 현재 위치와의 거리순으로 정렬한다. 프론트엔드는 서울 Open API나 다운로드 파일의
+원본 컬럼을 알 필요 없이 공통 시설 모델만 사용한다.
+
+## 추천 구현 순서
+
+1. 샘플 음수대·화장실 데이터를 공통 모델로 변환한다.
+2. FastAPI 정적 시설 API로 지도 마커 UI를 완성한다.
+3. 서울 음수대 Open API 수집기와 캐시를 연결한다.
+4. 승인받은 화장실 파일 인제스트 스크립트를 만든다.
+5. 거리 필터와 데이터 품질 검증을 추가한다.
 
 ## 완료 조건
 
 - 현재 위치 반경 안의 시설을 조회할 수 있다.
 - 물과 화장실 마커를 구분할 수 있다.
 - 데이터가 없거나 조회에 실패한 상태를 안내한다.
+- 원본 출처와 마지막 동기화 시점을 추적할 수 있다.

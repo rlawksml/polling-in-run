@@ -11,6 +11,7 @@
 | [`../TODO.md`](../TODO.md) | 현재 우선순위와 작업 체크리스트 |
 | `pages/` | 사용자가 보는 화면별 목적과 상태 |
 | `features/` | 여러 화면을 가로지르는 기능과 기술 결정 |
+| `data-sources/` | 외부 데이터 출처, 라이선스, 수집·정규화 방식 |
 
 ## Pages
 
@@ -27,6 +28,11 @@
 - [`러닝 추적`](./features/run-tracking.md)
 - [`기록 저장`](./features/record-storage.md)
 - [`인증과 설정`](./features/auth-and-settings.md)
+
+## Data Sources
+
+- [`서울시 공원 음수대`](./data-sources/seoul-park-water-fountains.md)
+- [`서울시 공중화장실`](./data-sources/seoul-public-restrooms.md)
 
 ## 문서 작성 규칙
 
