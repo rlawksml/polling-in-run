@@ -4,7 +4,10 @@ type KakaoLatLng = {
 }
 
 type KakaoMap = {
+  getLevel: () => number
   panTo: (position: KakaoLatLng) => void
+  setBounds: (bounds: kakao.maps.LatLngBounds) => void
+  setLevel: (level: number) => void
 }
 
 declare namespace kakao.maps {
@@ -22,7 +25,15 @@ declare namespace kakao.maps {
         level: number
       },
     )
+    getLevel(): number
     panTo(position: LatLng): void
+    setBounds(bounds: LatLngBounds): void
+    setLevel(level: number): void
+  }
+
+  class LatLngBounds {
+    constructor()
+    extend(position: LatLng): void
   }
 
   class Marker {

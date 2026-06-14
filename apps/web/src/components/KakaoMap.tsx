@@ -7,6 +7,7 @@ import { loadKakaoMaps } from '../lib/kakao-maps'
 type KakaoMapProps = {
   facilities: Facility[]
   location: CurrentLocation | null
+  onRequestLocation: () => void
 }
 
 const SEOUL_CITY_HALL = {
@@ -14,13 +15,66 @@ const SEOUL_CITY_HALL = {
   longitude: 126.978,
 }
 
-export function KakaoMap({ facilities, location }: KakaoMapProps) {
+export function KakaoMap({
+  facilities,
+  location,
+  onRequestLocation,
+}: KakaoMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const markerRef = useRef<kakao.maps.Marker | null>(null)
   const facilityOverlaysRef = useRef<kakao.maps.CustomOverlay[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+
+  const moveToCurrentLocation = () => {
+    if (!location || !mapRef.current || !window.kakao?.maps) {
+      onRequestLocation()
+      return
+    }
+
+    mapRef.current.panTo(
+      new window.kakao.maps.LatLng(location.latitude, location.longitude),
+    )
+  }
+
+  const showAllFacilities = () => {
+    if (
+      facilities.length === 0 ||
+      !mapRef.current ||
+      !window.kakao?.maps
+    ) {
+      return
+    }
+
+    const bounds = new window.kakao.maps.LatLngBounds()
+
+    facilities.forEach((facility) => {
+      bounds.extend(
+        new window.kakao!.maps.LatLng(
+          facility.latitude,
+          facility.longitude,
+        ),
+      )
+    })
+
+    if (location) {
+      bounds.extend(
+        new window.kakao.maps.LatLng(location.latitude, location.longitude),
+      )
+    }
+
+    mapRef.current.setBounds(bounds)
+  }
+
+  const changeZoom = (amount: number) => {
+    if (!mapRef.current) {
+      return
+    }
+
+    const nextLevel = Math.min(14, Math.max(1, mapRef.current.getLevel() + amount))
+    mapRef.current.setLevel(nextLevel)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -129,6 +183,34 @@ export function KakaoMap({ facilities, location }: KakaoMapProps) {
         <div className="map-message is-error" role="alert">
           <strong>지도를 표시할 수 없습니다.</strong>
           <span>{error}</span>
+        </div>
+      )}
+      {isReady && !error && (
+        <div className="map-controls" aria-label="지도 제어">
+          <button type="button" onClick={moveToCurrentLocation} aria-label="현재 위치로 이동">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="currentColor" />
+              <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={showAllFacilities}
+            aria-label="시설 전체 보기"
+            disabled={facilities.length === 0}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 4H4v4M16 4h4v4M20 16v4h-4M8 20H4v-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+              <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+            </svg>
+          </button>
+          <button type="button" onClick={() => changeZoom(-1)} aria-label="지도 확대">
+            +
+          </button>
+          <button type="button" onClick={() => changeZoom(1)} aria-label="지도 축소">
+            −
+          </button>
         </div>
       )}
     </div>

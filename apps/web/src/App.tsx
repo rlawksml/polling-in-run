@@ -46,7 +46,11 @@ function App() {
 
   return (
     <main className="app-shell">
-      <KakaoMap facilities={visibleFacilities} location={location} />
+      <KakaoMap
+        facilities={visibleFacilities}
+        location={location}
+        onRequestLocation={requestLocation}
+      />
 
       <header className="top-bar">
         <div>
