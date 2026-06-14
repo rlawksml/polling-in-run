@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getFacilities, type FacilityType } from './api/facilities'
+import { FacilityIcon } from './components/FacilityIcon'
 import { KakaoMap } from './components/KakaoMap'
 import { useCurrentLocation } from './hooks/use-current-location'
 import './App.css'
@@ -65,7 +66,7 @@ function App() {
           onClick={() => toggleFacilityType('water')}
         >
           <span className="facility-icon water" aria-hidden="true">
-            W
+            <FacilityIcon type="water" />
           </span>
           음수대
         </button>
@@ -76,7 +77,7 @@ function App() {
           onClick={() => toggleFacilityType('restroom')}
         >
           <span className="facility-icon restroom" aria-hidden="true">
-            R
+            <FacilityIcon type="restroom" />
           </span>
           화장실
         </button>

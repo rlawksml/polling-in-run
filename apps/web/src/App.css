@@ -133,8 +133,11 @@ button {
   place-items: center;
   border-radius: 50%;
   color: #ffffff;
-  font-size: 0.65rem;
-  font-weight: 900;
+}
+
+.facility-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .facility-icon.water {
@@ -169,9 +172,12 @@ button {
   border-radius: 50%;
   background: #2563eb;
   color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 900;
   box-shadow: 0 8px 18px rgba(16, 24, 40, 0.22);
+}
+
+.facility-marker svg {
+  width: 20px;
+  height: 20px;
 }
 
 .facility-marker.restroom {

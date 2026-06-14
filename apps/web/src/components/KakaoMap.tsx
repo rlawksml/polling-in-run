@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Facility } from '../api/facilities'
 import type { CurrentLocation } from '../hooks/use-current-location'
+import { getFacilityIconSvg } from '../lib/facility-icon-svg'
 import { loadKakaoMaps } from '../lib/kakao-maps'
 
 type KakaoMapProps = {
@@ -91,7 +92,7 @@ export function KakaoMap({ facilities, location }: KakaoMapProps) {
       marker.type = 'button'
       marker.className = `facility-marker ${facility.type}`
       marker.setAttribute('aria-label', facility.name)
-      marker.textContent = facility.type === 'water' ? 'W' : 'R'
+      marker.innerHTML = getFacilityIconSvg(facility.type)
 
       return new window.kakao!.maps.CustomOverlay({
         map: mapRef.current!,
