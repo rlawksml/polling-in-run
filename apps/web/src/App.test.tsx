@@ -1,19 +1,10 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
-function renderApp() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>,
-  )
-}
+vi.mock('./components/KakaoMap', () => ({
+  KakaoMap: () => <div aria-label="현재 위치와 주변 편의시설 지도" />,
+}))
 
 describe('App', () => {
   afterEach(() => {
@@ -21,33 +12,59 @@ describe('App', () => {
     vi.restoreAllMocks()
   })
 
-  it('shows the API connection details', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          status: 'ok',
-          service: 'polling-in-run-api',
-          version: '0.1.0',
-        }),
-        { status: 200 },
-      ),
-    )
+  it('shows the current location and running actions', async () => {
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 12.4,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: Date.now(),
+        toJSON: () => ({}),
+      })
+    })
 
-    renderApp()
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition },
+    })
 
-    expect(screen.getByText('서버에 연결하는 중')).toBeInTheDocument()
-    expect(await screen.findByText('개발 환경 준비 완료')).toBeInTheDocument()
-    expect(screen.getByText('polling-in-run-api')).toBeInTheDocument()
+    render(<App />)
+
+    expect(await screen.findByText('현재 위치를 중심으로 지도를 보여드려요.')).toBeInTheDocument()
+    expect(screen.getByText('약 12m 정확도')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
   })
 
-  it('shows a retry action when the API is unavailable', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
+  it('lets the user retry after denying location permission', async () => {
+    const getCurrentPosition = vi.fn(
+      (_success: PositionCallback, error: PositionErrorCallback) => {
+        error({
+          code: 1,
+          message: 'denied',
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3,
+        })
+      },
+    )
 
-    renderApp()
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition },
+    })
 
-    expect(
-      await screen.findByText('서버 연결을 확인해주세요', {}, { timeout: 2500 }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '다시 연결' })).toBeInTheDocument()
+    render(<App />)
+
+    expect(await screen.findByText(/위치 권한이 꺼져 있어요/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(getCurrentPosition).toHaveBeenCalledTimes(2)
   })
 })

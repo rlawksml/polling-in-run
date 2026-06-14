@@ -9,12 +9,18 @@
 
 - [x] 지도 제공자로 Kakao Maps 선택
 - [ ] Kakao Developers 앱 생성 및 JavaScript SDK 도메인 등록
-- [ ] `apps/web/.env.local`에 `VITE_KAKAO_MAP_KEY` 입력
-- [ ] 카카오맵 SDK 로더 구현
+- [x] `apps/web/.env.local`에 `VITE_KAKAO_MAP_KEY` 입력
+- [x] 카카오맵 SDK 로더 구현
 - [ ] 홈 화면에 전체 화면 지도 표시
-- [ ] 현재 위치 권한 요청과 사용자 마커 표시
-- [ ] 위치 로딩·거부·오류·미지원 상태 처리
+- [x] 현재 위치 권한 요청과 사용자 마커 구현
+- [x] 위치 로딩·거부·오류·미지원 상태 처리
 - [ ] 모바일 브라우저에서 실제 위치 확인
+
+현재 확인 사항:
+
+- Kakao SDK 요청은 `domain mismatched`로 차단된 상태다.
+- Kakao Developers 웹 플랫폼에 `http://localhost:5173`과
+  `http://127.0.0.1:5173`을 등록한 뒤 실제 지도와 사용자 마커를 확인한다.
 
 완료 조건:
 

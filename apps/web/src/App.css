@@ -2,144 +2,235 @@
   min-height: 100vh;
 }
 
-.app-shell {
-  width: min(100%, 480px);
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 64px 20px 32px;
-  display: grid;
-  align-content: start;
-  gap: 20px;
-}
-
-.hero {
-  padding: 12px 4px 20px;
-}
-
-.eyebrow,
-.status-label {
-  margin: 0 0 10px;
-  color: #2563eb;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.hero h1 {
-  max-width: 12ch;
-  margin: 0;
-  color: #101828;
-  font-size: clamp(2.4rem, 12vw, 4rem);
-  line-height: 1.02;
-  letter-spacing: -0.065em;
-}
-
-.hero-copy {
-  margin: 24px 0 0;
-  color: #667085;
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-.status-card,
-.next-card {
-  border: 1px solid #e4e7ec;
-  border-radius: 24px;
-  background: #ffffff;
-  box-shadow: 0 18px 45px rgba(16, 24, 40, 0.08);
-}
-
-.status-card {
-  position: relative;
-  padding: 24px;
-}
-
-.status-card h2,
-.next-card h2 {
-  margin: 0;
-  color: #101828;
-  font-size: 1.35rem;
-  letter-spacing: -0.035em;
-}
-
-.status-dot {
-  position: absolute;
-  top: 27px;
-  right: 24px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fdb022;
-  box-shadow: 0 0 0 6px rgba(253, 176, 34, 0.15);
-}
-
-.status-dot.is-online {
-  background: #12b76a;
-  box-shadow: 0 0 0 6px rgba(18, 183, 106, 0.15);
-}
-
-.status-dot.is-error {
-  background: #f04438;
-  box-shadow: 0 0 0 6px rgba(240, 68, 56, 0.15);
-}
-
-.status-details {
-  margin: 24px 0 0;
-  display: grid;
-  gap: 10px;
-}
-
-.status-details div {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.status-details dt {
-  color: #98a2b3;
-}
-
-.status-details dd {
-  margin: 0;
-  color: #344054;
-  font-weight: 700;
-}
-
 button {
-  width: 100%;
-  margin-top: 24px;
   border: 0;
-  border-radius: 14px;
-  padding: 14px 18px;
-  background: #101828;
-  color: #ffffff;
   font: inherit;
-  font-weight: 800;
   cursor: pointer;
 }
 
-.next-card {
-  padding: 24px;
+.app-shell {
+  position: relative;
+  width: min(100%, 480px);
+  height: 100dvh;
+  min-height: 640px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #e8edf2;
+}
+
+.map-area,
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.map-canvas {
+  background:
+    linear-gradient(rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.02)),
+    #e8edf2;
+}
+
+.map-message {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  width: min(80%, 320px);
+  transform: translate(-50%, -50%);
+  padding: 18px;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #475467;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(16, 24, 40, 0.12);
+}
+
+.map-message.is-error {
+  display: grid;
+  gap: 6px;
+  color: #b42318;
+}
+
+.top-bar {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(20px, env(safe-area-inset-top)) 20px 28px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.98) 0%,
+    rgba(248, 250, 252, 0.78) 70%,
+    transparent 100%
+  );
+}
+
+.eyebrow,
+.location-label {
+  margin: 0 0 6px;
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.top-bar h1 {
+  margin: 0;
+  color: #101828;
+  font-size: 1.3rem;
+  letter-spacing: -0.045em;
+}
+
+.profile-button {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(16, 24, 40, 0.12);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #101828;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.12);
+}
+
+.facility-filter {
+  position: absolute;
+  z-index: 2;
+  top: 112px;
+  left: 20px;
+  display: flex;
+  gap: 8px;
+}
+
+.facility-filter button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 8px 8px;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.1);
+}
+
+.facility-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.facility-icon.water {
+  background: #2563eb;
+}
+
+.facility-icon.restroom {
   background: #101828;
 }
 
-.next-card .status-label {
-  color: #84adff;
+.location-card {
+  position: absolute;
+  z-index: 2;
+  right: 20px;
+  bottom: calc(160px + env(safe-area-inset-bottom));
+  left: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 36px rgba(16, 24, 40, 0.14);
+  backdrop-filter: blur(12px);
 }
 
-.next-card h2 {
+.location-card p {
+  margin: 0;
+  color: #344054;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.location-card.is-error {
+  border-color: rgba(240, 68, 56, 0.25);
+}
+
+.location-card button {
+  flex: 0 0 auto;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #101828;
   color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
-.next-card p:last-child {
-  margin: 12px 0 0;
+.accuracy {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 0.72rem;
+}
+
+.start-button {
+  position: absolute;
+  z-index: 2;
+  right: 20px;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  left: 20px;
+  min-height: 60px;
+  border-radius: 18px;
+  background: #101828;
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 900;
+  box-shadow: 0 18px 36px rgba(16, 24, 40, 0.24);
+}
+
+.bottom-nav {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 8px 14px max(8px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(16, 24, 40, 0.08);
+  background: rgba(255, 255, 255, 0.97);
+}
+
+.bottom-nav button {
+  padding: 12px;
+  background: transparent;
   color: #98a2b3;
-  line-height: 1.6;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.bottom-nav button.is-active {
+  color: #2563eb;
 }
 
 @media (min-width: 700px) {
   .app-shell {
-    padding-top: 96px;
+    margin-top: 24px;
+    height: calc(100dvh - 48px);
+    max-height: 900px;
+    border-radius: 30px;
+    box-shadow: 0 24px 70px rgba(16, 24, 40, 0.18);
   }
 }

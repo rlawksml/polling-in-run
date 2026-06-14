@@ -148,7 +148,7 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ## Current Status
 
-첫 번째 수직 기능으로 React 앱과 FastAPI의 `GET /api/health`를 연결했습니다. 지도 제공자는 국내 공공시설 탐색에 적합한 Kakao Maps로 결정했으며, 다음 단계는 카카오맵과 현재 위치의 로딩·권한·오류 상태를 구현하는 것입니다.
+React 앱과 FastAPI의 첫 수직 기능에 이어, Kakao Maps SDK 로더와 현재 위치의 로딩·허용·거부·오류 상태를 구현했습니다. Kakao Developers 웹 도메인 등록 후 실제 지도와 사용자 마커를 최종 확인하고 주변 편의시설 데이터를 연결합니다.
 
 ## Local Development
 
