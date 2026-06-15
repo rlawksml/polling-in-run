@@ -85,6 +85,9 @@ describe('App', () => {
     expect(screen.getByText('시설 2개')).toBeInTheDocument()
     expect(screen.getByText('약 12m 정확도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/facilities?latitude=37.5665&longitude=126.978&radius_m=3000',
+    )
   })
 
   it('lets the user retry after denying location permission', async () => {

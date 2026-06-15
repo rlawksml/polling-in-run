@@ -1,6 +1,7 @@
+from math import asin, cos, radians, sin, sqrt
 from typing import Literal, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -20,6 +21,10 @@ class Facility(BaseModel):
     address: str
     opening_hours: Optional[str] = None
     source: str
+
+
+class FacilityResponse(Facility):
+    distance_m: Optional[int] = None
 
 
 SAMPLE_FACILITIES = [
@@ -84,6 +89,83 @@ def health_check() -> HealthResponse:
     )
 
 
-@app.get("/api/facilities", response_model=list[Facility], tags=["facilities"])
-def list_facilities() -> list[Facility]:
-    return SAMPLE_FACILITIES
+def calculate_distance_m(
+    origin_latitude: float,
+    origin_longitude: float,
+    destination_latitude: float,
+    destination_longitude: float,
+) -> int:
+    earth_radius_m = 6_371_000
+    latitude_delta = radians(destination_latitude - origin_latitude)
+    longitude_delta = radians(destination_longitude - origin_longitude)
+    origin_latitude_rad = radians(origin_latitude)
+    destination_latitude_rad = radians(destination_latitude)
+
+    haversine = (
+        sin(latitude_delta / 2) ** 2
+        + cos(origin_latitude_rad)
+        * cos(destination_latitude_rad)
+        * sin(longitude_delta / 2) ** 2
+    )
+
+    return round(earth_radius_m * 2 * asin(sqrt(haversine)))
+
+
+@app.get(
+    "/api/facilities",
+    response_model=list[FacilityResponse],
+    tags=["facilities"],
+)
+def list_facilities(
+    latitude: Optional[float] = Query(default=None, ge=-90, le=90),
+    longitude: Optional[float] = Query(default=None, ge=-180, le=180),
+    radius_m: int = Query(default=3000, ge=100, le=50000),
+    facility_types: Optional[str] = Query(default=None, alias="type"),
+) -> list[FacilityResponse]:
+    if (latitude is None) != (longitude is None):
+        raise HTTPException(
+            status_code=422,
+            detail="latitude and longitude must be provided together",
+        )
+
+    selected_types = (
+        {item.strip() for item in facility_types.split(",")}
+        if facility_types
+        else {"water", "restroom"}
+    )
+    invalid_types = selected_types - {"water", "restroom"}
+
+    if invalid_types:
+        raise HTTPException(
+            status_code=422,
+            detail=f"unsupported facility type: {sorted(invalid_types)[0]}",
+        )
+
+    facilities = [
+        FacilityResponse(**facility.model_dump())
+        for facility in SAMPLE_FACILITIES
+        if facility.type in selected_types
+    ]
+
+    if latitude is None or longitude is None:
+        return facilities
+
+    nearby_facilities = []
+
+    for facility in facilities:
+        distance_m = calculate_distance_m(
+            latitude,
+            longitude,
+            facility.latitude,
+            facility.longitude,
+        )
+
+        if distance_m <= radius_m:
+            nearby_facilities.append(
+                facility.model_copy(update={"distance_m": distance_m})
+            )
+
+    return sorted(
+        nearby_facilities,
+        key=lambda facility: facility.distance_m or 0,
+    )

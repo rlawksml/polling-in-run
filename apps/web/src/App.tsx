@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { getFacilities, type FacilityType } from './api/facilities'
 import { FacilityIcon } from './components/FacilityIcon'
 import { KakaoMap } from './components/KakaoMap'
+import { Button } from './components/ui/button'
 import { useCurrentLocation } from './hooks/use-current-location'
 import './App.css'
 
@@ -17,15 +18,20 @@ const locationMessages = {
 }
 
 function App() {
+  const { location, requestLocation, status } = useCurrentLocation()
   const facilities = useQuery({
-    queryKey: ['facilities'],
-    queryFn: getFacilities,
+    queryKey: ['facilities', location?.latitude, location?.longitude],
+    queryFn: () =>
+      getFacilities({
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+      }),
+    enabled: status !== 'loading',
   })
   const [visibleTypes, setVisibleTypes] = useState<FacilityType[]>([
     'water',
     'restroom',
   ])
-  const { location, requestLocation, status } = useCurrentLocation()
   const hasLocationError = [
     'denied',
     'unavailable',
@@ -57,13 +63,14 @@ function App() {
           <p className="eyebrow">POLLING IN RUN</p>
           <h1>달리기 좋은 순간이에요.</h1>
         </div>
-        <button className="profile-button" type="button" aria-label="마이 페이지">
+        <Button className="profile-button" type="button" aria-label="마이 페이지">
           MY
-        </button>
+        </Button>
       </header>
 
       <section className="facility-filter" aria-label="편의시설 필터">
-        <button
+        <Button
+          variant="outline"
           className={visibleTypes.includes('water') ? 'is-active' : ''}
           type="button"
           aria-pressed={visibleTypes.includes('water')}
@@ -73,8 +80,9 @@ function App() {
             <FacilityIcon type="water" />
           </span>
           음수대
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
           className={visibleTypes.includes('restroom') ? 'is-active' : ''}
           type="button"
           aria-pressed={visibleTypes.includes('restroom')}
@@ -84,7 +92,7 @@ function App() {
             <FacilityIcon type="restroom" />
           </span>
           화장실
-        </button>
+        </Button>
       </section>
 
       <div className="facility-status" aria-live="polite">
@@ -104,22 +112,22 @@ function App() {
           )}
         </div>
         {hasLocationError && status !== 'unsupported' && (
-          <button type="button" onClick={requestLocation}>
+          <Button type="button" onClick={requestLocation}>
             다시 시도
-          </button>
+          </Button>
         )}
       </section>
 
-      <button className="start-button" type="button">
+      <Button className="start-button" type="button">
         러닝 시작
-      </button>
+      </Button>
 
       <nav className="bottom-nav" aria-label="주요 메뉴">
-        <button className="is-active" type="button">
+        <Button variant="ghost" className="is-active" type="button">
           홈
-        </button>
-        <button type="button">기록</button>
-        <button type="button">마이</button>
+        </Button>
+        <Button variant="ghost" type="button">기록</Button>
+        <Button variant="ghost" type="button">마이</Button>
       </nav>
     </main>
   )
