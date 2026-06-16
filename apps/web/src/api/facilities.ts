@@ -7,8 +7,11 @@ export type Facility = {
   latitude: number
   longitude: number
   address: string
+  source_id: string | null
+  road_address: string | null
   opening_hours: string | null
   source: string
+  details: Record<string, string>
   distance_m: number | null
 }
 
