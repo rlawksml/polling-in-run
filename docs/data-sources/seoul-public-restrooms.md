@@ -46,6 +46,15 @@
 - 다운로드 파일을 저장소에 그대로 커밋하지 않는다.
 - 원본 사용 조건과 출처 표시 문구를 승인 후 다시 확인한다.
 
+## 로컬 원본 보관
+
+- 로컬 경로: `data/raw/restrooms/seoul-public-restrooms.xlsx`
+- 실제 공간데이터 경로: `data/raw/restrooms/seoul-public-restrooms/Toilet_seoul.dbf`
+- GitHub에는 원본 XLSX/ZIP을 올리지 않고 `data/raw/restrooms/README.md`만 추적한다.
+- 2026-06-17에 확인한 XLSX는 실제 시설 행 데이터가 아니라 컬럼 정의서였다.
+- 실제 연결에는 `TOILET_NM`, `LAT`, `LON`, 주소, 개방시간이 포함된 행 데이터 파일이 필요하다.
+- 2026-06-17에 추가 확인한 Shapefile/DBF 원본은 4,799건의 화장실 행 데이터를 포함한다.
+
 ## 추천 수집 방식
 
 ```text

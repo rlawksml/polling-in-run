@@ -3,6 +3,8 @@ from functools import lru_cache
 from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
 from typing import Literal, Optional
+from xml.etree import ElementTree
+from zipfile import ZipFile
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
@@ -12,6 +14,23 @@ from pydantic import BaseModel, Field
 SEOUL_OPEN_DATA_BASE_URL = "http://openapi.seoul.go.kr:8088"
 SEOUL_WATER_FOUNTAIN_SERVICE = "TbViewGisArisu"
 SEOUL_OPEN_DATA_PAGE_SIZE = 1000
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+SEOUL_RESTROOM_XLSX_PATH = (
+    PROJECT_ROOT / "data" / "raw" / "restrooms" / "seoul-public-restrooms.xlsx"
+)
+SEOUL_RESTROOM_DBF_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "raw"
+    / "restrooms"
+    / "seoul-public-restrooms"
+    / "Toilet_seoul.dbf"
+)
+XLSX_NS = {
+    "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+    "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+    "pkg": "http://schemas.openxmlformats.org/package/2006/relationships",
+}
 
 
 class HealthResponse(BaseModel):
@@ -120,6 +139,185 @@ def to_detail_map(row: dict[str, str]) -> dict[str, str]:
     return details
 
 
+def compact(value: object) -> str:
+    return str(value or "").replace("\xa0", " ").strip()
+
+
+def first_value(row: dict[str, str], *keys: str) -> str:
+    for key in keys:
+        value = compact(row.get(key))
+
+        if value:
+            return value
+
+    return ""
+
+
+def parse_float(value: object) -> Optional[float]:
+    try:
+        return float(compact(value))
+    except ValueError:
+        return None
+
+
+def column_index(cell_reference: str) -> int:
+    letters = ""
+
+    for char in cell_reference:
+        if not char.isalpha():
+            break
+
+        letters += char.upper()
+
+    index = 0
+
+    for letter in letters:
+        index = index * 26 + ord(letter) - ord("A") + 1
+
+    return index - 1
+
+
+def read_shared_strings(workbook: ZipFile) -> list[str]:
+    if "xl/sharedStrings.xml" not in workbook.namelist():
+        return []
+
+    root = ElementTree.fromstring(workbook.read("xl/sharedStrings.xml"))
+    strings = []
+
+    for item in root.findall("main:si", XLSX_NS):
+        parts = [
+            text.text or ""
+            for text in item.findall(".//main:t", XLSX_NS)
+        ]
+        strings.append("".join(parts))
+
+    return strings
+
+
+def first_worksheet_path(workbook: ZipFile) -> str:
+    workbook_root = ElementTree.fromstring(workbook.read("xl/workbook.xml"))
+    first_sheet = workbook_root.find("main:sheets/main:sheet", XLSX_NS)
+
+    if first_sheet is None:
+        raise ValueError("xlsx workbook has no sheets")
+
+    relationship_id = first_sheet.attrib[
+        "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+    ]
+    relationships_root = ElementTree.fromstring(
+        workbook.read("xl/_rels/workbook.xml.rels")
+    )
+
+    for relationship in relationships_root.findall("pkg:Relationship", XLSX_NS):
+        if relationship.attrib.get("Id") == relationship_id:
+            target = relationship.attrib["Target"].lstrip("/")
+            return target if target.startswith("xl/") else f"xl/{target}"
+
+    raise ValueError("xlsx first sheet relationship was not found")
+
+
+def cell_text(cell: ElementTree.Element, shared_strings: list[str]) -> str:
+    value = cell.find("main:v", XLSX_NS)
+
+    if cell.attrib.get("t") == "inlineStr":
+        return "".join(
+            text.text or ""
+            for text in cell.findall(".//main:t", XLSX_NS)
+        )
+
+    if value is None or value.text is None:
+        return ""
+
+    if cell.attrib.get("t") == "s":
+        index = int(value.text)
+        return shared_strings[index] if index < len(shared_strings) else ""
+
+    return value.text
+
+
+def read_xlsx_rows(path: Path) -> list[dict[str, str]]:
+    with ZipFile(path) as workbook:
+        shared_strings = read_shared_strings(workbook)
+        sheet_path = first_worksheet_path(workbook)
+        sheet_root = ElementTree.fromstring(workbook.read(sheet_path))
+
+    rows = []
+
+    for row in sheet_root.findall(".//main:sheetData/main:row", XLSX_NS):
+        values: dict[int, str] = {}
+
+        for cell in row.findall("main:c", XLSX_NS):
+            reference = cell.attrib.get("r", "")
+            values[column_index(reference)] = compact(
+                cell_text(cell, shared_strings)
+            )
+
+        if values:
+            rows.append(values)
+
+    if not rows:
+        return []
+
+    headers = {
+        index: value
+        for index, value in rows[0].items()
+        if value
+    }
+
+    return [
+        {
+            header: row.get(index, "")
+            for index, header in headers.items()
+        }
+        for row in rows[1:]
+    ]
+
+
+def read_dbf_rows(path: Path) -> list[dict[str, str]]:
+    data = path.read_bytes()
+    record_count = int.from_bytes(data[4:8], byteorder="little")
+    header_length = int.from_bytes(data[8:10], byteorder="little")
+    record_length = int.from_bytes(data[10:12], byteorder="little")
+    fields = []
+    offset = 1
+    cursor = 32
+
+    while data[cursor] != 0x0D:
+        descriptor = data[cursor:cursor + 32]
+        name = (
+            descriptor[:11]
+            .split(b"\x00", 1)[0]
+            .decode("ascii", errors="ignore")
+        )
+        length = descriptor[16]
+        fields.append((name, length, offset))
+        offset += length
+        cursor += 32
+
+    rows = []
+
+    for index in range(record_count):
+        start = header_length + index * record_length
+        record = data[start:start + record_length]
+
+        if not record or record[0:1] == b"*":
+            continue
+
+        row = {
+            name: compact(
+                record[field_offset:field_offset + length].decode(
+                    "utf-8",
+                    errors="replace",
+                )
+            )
+            for name, length, field_offset in fields
+        }
+
+        rows.append(row)
+
+    return rows
+
+
 def normalize_water_fountain(row: dict[str, str]) -> Optional[Facility]:
     try:
         latitude = float(row["YCRD"])
@@ -149,6 +347,82 @@ def normalize_water_fountain(row: dict[str, str]) -> Optional[Facility]:
         road_address=road_address,
         source="seoul-open-data",
         details=to_detail_map(row),
+    )
+
+
+def normalize_public_restroom(row: dict[str, str]) -> Optional[Facility]:
+    latitude = parse_float(first_value(row, "LAT", "LATITUDE"))
+    longitude = parse_float(first_value(row, "LON", "LONGITUDE"))
+
+    if latitude is None or longitude is None:
+        return None
+
+    if not (37.0 <= latitude <= 38.0 and 126.0 <= longitude <= 128.0):
+        return None
+
+    source_id = first_value(row, "NUM", "PNU")
+    name = first_value(row, "TOILET_NM")
+    road_address = first_value(
+        row,
+        "LCTN_ROAD_NM_ADDR",
+        "LCTN_ROAD_",
+        "ADDRESS",
+    ) or None
+    lot_address = first_value(
+        row,
+        "LCTN_LOTNO_ADDR",
+        "LCTN_LOTNO",
+        "ADDRESS1",
+    )
+    address = road_address or lot_address
+
+    if not name or not address:
+        return None
+
+    opening_time = first_value(row, "OPN_TIME")
+    opening_time_detail = first_value(row, "OPN_TIME_DTL", "OPN_TIME_D")
+    opening_values = []
+
+    for value in [opening_time, opening_time_detail]:
+        if value and value not in opening_values:
+            opening_values.append(value)
+
+    opening_hours = " ".join(opening_values) or None
+
+    details = {
+        key: value
+        for key in [
+            "SE",
+            "BSS",
+            "MNG_INST_NM",
+            "MNG_INST_N",
+            "TEL",
+            "OWNR_SE",
+            "PRCS_SE",
+            "SAFE_FCLT_SE",
+            "SAFE_FCLT_",
+            "BELL_INSTL_YN",
+            "BELL_INSTL",
+            "CCTV_YN",
+            "DIAPER_YN",
+            "DATA_WRT_YMD",
+            "DATA_WRT_Y",
+        ]
+        if (value := first_value(row, key))
+    }
+
+    return Facility(
+        id=f"restroom-seoul-{source_id or name}",
+        source_id=source_id or None,
+        type="restroom",
+        name=name,
+        latitude=latitude,
+        longitude=longitude,
+        address=address,
+        road_address=road_address,
+        opening_hours=opening_hours,
+        source="geomarket-restrooms",
+        details=details,
     )
 
 
@@ -212,17 +486,40 @@ def load_seoul_water_fountains() -> list[Facility]:
     return facilities
 
 
+@lru_cache(maxsize=1)
+def load_seoul_public_restrooms() -> list[Facility]:
+    if SEOUL_RESTROOM_DBF_PATH.exists():
+        rows = read_dbf_rows(SEOUL_RESTROOM_DBF_PATH)
+    elif SEOUL_RESTROOM_XLSX_PATH.exists():
+        rows = read_xlsx_rows(SEOUL_RESTROOM_XLSX_PATH)
+    else:
+        return []
+
+    return [
+        facility
+        for row in rows
+        if (facility := normalize_public_restroom(row)) is not None
+    ]
+
+
 def load_facilities() -> list[Facility]:
     water_facilities = load_seoul_water_fountains()
+    restroom_facilities = load_seoul_public_restrooms()
 
-    if not water_facilities:
+    if not water_facilities and not restroom_facilities:
         return SAMPLE_FACILITIES
 
-    sample_restrooms = [
+    sample_water_facilities = [
+        facility for facility in SAMPLE_FACILITIES if facility.type == "water"
+    ]
+    sample_restroom_facilities = [
         facility for facility in SAMPLE_FACILITIES if facility.type == "restroom"
     ]
 
-    return [*water_facilities, *sample_restrooms]
+    return [
+        *(water_facilities or sample_water_facilities),
+        *(restroom_facilities or sample_restroom_facilities),
+    ]
 
 
 app = FastAPI(title="Polling In Run API", version="0.1.0")

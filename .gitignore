@@ -15,7 +15,10 @@ build/
 !.env.example
 .DS_Store
 
+# Local source data
+data/raw/restrooms/*
+!data/raw/restrooms/README.md
+
 # IDE
 .idea/
 .vscode/
-

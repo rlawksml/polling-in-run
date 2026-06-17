@@ -94,10 +94,14 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ## MVP Scope
 
-- [ ] 현재 위치 표시
-- [ ] 주변 공공 화장실 표시
-- [ ] 주변 공공 음수대 표시
-- [ ] 러닝 시작 및 종료
+- [x] 현재 위치 표시
+- [x] 지도 컨트롤
+- [x] 실제 서울 공원 음수대 표시
+- [x] 실제 서울 공중화장실 표시
+- [x] 시설 필터와 상세 카드
+- [x] 카카오맵 길찾기 연결
+- [x] 러닝 시작·일시정지·종료 상태 모델
+- [ ] GPS 기반 러닝 거리 계산
 - [ ] 러닝 메모 저장
 - [ ] 러닝 기록 목록
 
@@ -112,14 +116,21 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 ### Phase 2: Map and Public Data
 
 - [x] 지도 API 선정
-- [ ] 현재 위치 표시
+- [x] 현재 위치 표시
 - [x] 공공 음수대·화장실 데이터 조사
-- [ ] FastAPI 데이터 정규화 및 주변 시설 API
+- [x] FastAPI 데이터 정규화 및 주변 시설 API
+- [x] 서울 공원 음수대 Open API 연결
+- [x] 마커 상세 카드와 카카오맵 길찾기 연결
+- [x] 화장실 DBF 원본 검증 및 실제 데이터 연결
+- [ ] 지도 영역 기반 시설 조회
+- [ ] 마커 클러스터링
 
 ### Phase 3: Running Records
 
 - [ ] Supabase 프로젝트 및 데이터 모델
-- [ ] 러닝 시작·종료
+- [x] 러닝 시작·일시정지·종료 상태 모델
+- [ ] 화면이 켜진 상태에서 위치 추적
+- [ ] 거리와 페이스 계산
 - [ ] 기록과 메모 저장
 - [ ] 기록 목록 및 상세
 
@@ -148,7 +159,9 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 ## Current Status
 
-React 앱과 FastAPI의 첫 수직 기능에 이어 Kakao Maps 지도와 현재 위치 상태를 구현했습니다. 현재 FastAPI 공통 시설 모델의 샘플 음수대·화장실 4곳을 종류별 마커와 필터로 표시합니다. 다음 단계는 샘플 데이터를 서울 음수대 Open API 수집·캐시 결과로 교체하는 것입니다.
+Kakao Maps 기반 홈 화면에서 현재 위치, 지도 컨트롤, 실제 서울 공원 음수대 마커, 실제 서울 공중화장실 마커를 표시합니다. FastAPI는 서울 열린데이터광장 음수대 데이터와 공간데이터마켓 화장실 DBF 원본을 공통 `Facility` 모델로 정규화하고, 현재 위치 반경 안의 시설을 거리순으로 반환합니다.
+
+마커를 선택하면 시설명, 주소, 거리 정보를 확인할 수 있으며 카카오맵 길찾기로 이동할 수 있습니다. 러닝 프로세스는 `idle → running → paused → finished` 상태 모델과 1차 진행 화면까지 구현했습니다. 다음 큰 작업은 GPS 기반 이동 경로 추적, 지도 영역 기반 시설 조회, 마커 클러스터링입니다.
 
 ## Local Development
 
@@ -163,9 +176,20 @@ npm --prefix apps/web install
 npm run dev:web
 ```
 
-- Web: http://127.0.0.1:5173
+- Web: http://localhost:5173
 - API health: http://127.0.0.1:8000/api/health
 - API docs: http://127.0.0.1:8000/docs
+
+Kakao Maps JavaScript SDK는 등록된 Web 플랫폼 도메인에서만 동작합니다. 로컬 개발은 `http://localhost:5173`을 기준으로 확인하고, 모바일 실기기에서 내부 IP로 접속하려면 해당 IP 주소를 Kakao Developers에 추가 등록해야 합니다.
+
+## Documentation Maintenance
+
+기능 추가, 삭제, 기술 선택 변경이 생기면 코드와 함께 문서를 갱신합니다.
+
+- 프로젝트 소개와 현재 상태가 바뀌면 이 `README.md`를 갱신합니다.
+- 작업 우선순위와 완료 여부는 [`TODO.md`](./TODO.md)에 반영합니다.
+- 화면·기능별 판단은 [`docs/`](./docs/README.md)에 기록합니다.
+- 블로그나 포트폴리오 글감은 [`docs/blog/`](./docs/blog/README.md)에 초안으로 남깁니다.
 
 ## Verification
 

@@ -135,4 +135,37 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '음수대' }))
     expect(screen.getByText('샘플 시설 1곳 표시 중')).toBeInTheDocument()
   })
+
+  it('moves through the first running session flow', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '러닝 시작' }))
+
+    expect(screen.getByText('러닝 진행 중')).toBeInTheDocument()
+    expect(screen.getByText('0.00 km')).toBeInTheDocument()
+    expect(screen.getByText('--')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '일시정지' }))
+    expect(screen.getByText('러닝 일시정지')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '재개' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '재개' }))
+    expect(screen.getByText('러닝 진행 중')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '종료' }))
+    expect(screen.getByText('러닝 완료')).toBeInTheDocument()
+    expect(screen.getByText('오늘의 러닝을 저장할까요?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '홈으로' }))
+    expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
+  })
 })

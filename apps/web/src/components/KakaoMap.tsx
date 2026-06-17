@@ -24,8 +24,13 @@ export function KakaoMap({
   const mapRef = useRef<KakaoMap | null>(null)
   const markerRef = useRef<kakao.maps.Marker | null>(null)
   const facilityOverlaysRef = useRef<kakao.maps.CustomOverlay[]>([])
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const selectedFacility =
+    facilities.find((facility) => facility.id === selectedFacilityId) ?? null
 
   const moveToCurrentLocation = () => {
     if (!location || !mapRef.current || !window.kakao?.maps) {
@@ -74,6 +79,17 @@ export function KakaoMap({
 
     const nextLevel = Math.min(14, Math.max(1, mapRef.current.getLevel() + amount))
     mapRef.current.setLevel(nextLevel)
+  }
+
+  const openKakaoDirections = (facility: Facility) => {
+    const destinationName = encodeURIComponent(facility.name)
+    const destination = `${destinationName},${facility.latitude},${facility.longitude}`
+
+    window.open(
+      `https://map.kakao.com/link/to/${destination}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
   }
 
   useEffect(() => {
@@ -147,6 +163,15 @@ export function KakaoMap({
       marker.className = `facility-marker ${facility.type}`
       marker.setAttribute('aria-label', facility.name)
       marker.innerHTML = getFacilityIconSvg(facility.type)
+      marker.addEventListener('click', () => {
+        setSelectedFacilityId(facility.id)
+        mapRef.current?.panTo(
+          new window.kakao!.maps.LatLng(
+            facility.latitude,
+            facility.longitude,
+          ),
+        )
+      })
 
       return new window.kakao!.maps.CustomOverlay({
         map: mapRef.current!,
@@ -212,6 +237,41 @@ export function KakaoMap({
             −
           </button>
         </div>
+      )}
+      {selectedFacility && (
+        <aside className="facility-detail-card" aria-live="polite">
+          <div>
+            <p className="facility-detail-type">
+              {selectedFacility.type === 'water' ? '음수대' : '화장실'}
+              {selectedFacility.distance_m !== null
+                ? ` · ${selectedFacility.distance_m.toLocaleString()}m`
+                : ''}
+            </p>
+            <h2>{selectedFacility.name}</h2>
+            <p>{selectedFacility.road_address ?? selectedFacility.address}</p>
+            {selectedFacility.opening_hours && (
+              <p className="facility-detail-meta">
+                운영시간 {selectedFacility.opening_hours}
+              </p>
+            )}
+          </div>
+          <div className="facility-detail-actions">
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => setSelectedFacilityId(null)}
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => openKakaoDirections(selectedFacility)}
+            >
+              길찾기
+            </button>
+          </div>
+        </aside>
       )}
     </div>
   )

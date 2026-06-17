@@ -12,6 +12,7 @@
 | `pages/` | 사용자가 보는 화면별 목적과 상태 |
 | `features/` | 여러 화면을 가로지르는 기능과 기술 결정 |
 | `data-sources/` | 외부 데이터 출처, 라이선스, 수집·정규화 방식 |
+| `blog/` | 개발 과정을 블로그·포트폴리오 글로 옮기기 위한 초안 |
 
 ## Pages
 
@@ -33,6 +34,10 @@
 
 - [`서울시 공원 음수대`](./data-sources/seoul-park-water-fountains.md)
 - [`서울시 공중화장실`](./data-sources/seoul-public-restrooms.md)
+
+## Blog Drafts
+
+- [`카카오맵과 공공데이터로 러닝 편의시설 지도 만들기`](./blog/카카오맵과_공공데이터로_러닝_편의시설_지도_만들기.md)
 
 ## 문서 작성 규칙
 
