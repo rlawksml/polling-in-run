@@ -417,6 +417,13 @@ button {
   line-height: 1.5;
 }
 
+.running-warning {
+  display: block;
+  margin-top: 6px;
+  color: #b42318;
+  font-weight: 700;
+}
+
 .running-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

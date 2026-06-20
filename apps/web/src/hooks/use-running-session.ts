@@ -1,19 +1,57 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type RunningStatus = 'idle' | 'running' | 'paused' | 'finished'
+export type RunTrackingStatus =
+  | 'idle'
+  | 'tracking'
+  | 'paused'
+  | 'unsupported'
+  | 'error'
+
+export type RunLocationPoint = {
+  accuracy: number
+  latitude: number
+  longitude: number
+  timestamp: number
+}
 
 type RunningSession = {
   accumulatedMs: number
   distanceM: number
+  routePoints: RunLocationPoint[]
   startedAt: number | null
   status: RunningStatus
+  trackingError: string | null
+  trackingStatus: RunTrackingStatus
 }
 
 const initialSession: RunningSession = {
   accumulatedMs: 0,
   distanceM: 0,
+  routePoints: [],
   startedAt: null,
   status: 'idle',
+  trackingError: null,
+  trackingStatus: 'idle',
+}
+
+const MAX_TRACKING_ACCURACY_M = 80
+
+function getTrackingStartState(): Pick<
+  RunningSession,
+  'trackingError' | 'trackingStatus'
+> {
+  if (!navigator.geolocation?.watchPosition) {
+    return {
+      trackingError: '이 브라우저는 실시간 위치 추적을 지원하지 않아요.',
+      trackingStatus: 'unsupported',
+    }
+  }
+
+  return {
+    trackingError: null,
+    trackingStatus: 'tracking',
+  }
 }
 
 export function formatElapsedTime(elapsedMs: number) {
@@ -71,14 +109,74 @@ export function useRunningSession() {
     return () => window.clearInterval(timerId)
   }, [session.status])
 
+  useEffect(() => {
+    if (session.status !== 'running') {
+      return
+    }
+
+    if (
+      !navigator.geolocation?.watchPosition ||
+      session.trackingStatus === 'unsupported'
+    ) {
+      return
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      ({ coords, timestamp }) => {
+        if (coords.accuracy > MAX_TRACKING_ACCURACY_M) {
+          setSession((current) => ({
+            ...current,
+            trackingError: `GPS 정확도가 낮아 이번 좌표는 제외했어요. (${Math.round(
+              coords.accuracy,
+            )}m)`,
+          }))
+          return
+        }
+
+        setSession((current) => ({
+          ...current,
+          routePoints: [
+            ...current.routePoints,
+            {
+              accuracy: coords.accuracy,
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              timestamp,
+            },
+          ],
+          trackingError: null,
+        }))
+      },
+      (error) => {
+        setSession((current) => ({
+          ...current,
+          trackingError:
+            error.message || '러닝 위치를 추적하는 중 오류가 발생했어요.',
+          trackingStatus: 'error',
+        }))
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 10000,
+      },
+    )
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+    }
+  }, [session.status, session.trackingStatus])
+
   const start = useCallback(() => {
     const timestamp = Date.now()
     setNow(timestamp)
     setSession({
       accumulatedMs: 0,
       distanceM: 0,
+      routePoints: [],
       startedAt: timestamp,
       status: 'running',
+      ...getTrackingStartState(),
     })
   }, [])
 
@@ -93,6 +191,7 @@ export function useRunningSession() {
         accumulatedMs: current.accumulatedMs + Date.now() - current.startedAt,
         startedAt: null,
         status: 'paused',
+        trackingStatus: 'paused',
       }
     })
   }, [])
@@ -109,6 +208,7 @@ export function useRunningSession() {
         ...current,
         startedAt: timestamp,
         status: 'running',
+        ...getTrackingStartState(),
       }
     })
   }, [])
@@ -120,6 +220,7 @@ export function useRunningSession() {
           return {
             ...current,
             status: 'finished',
+            trackingStatus: 'idle',
           }
         }
 
@@ -131,6 +232,7 @@ export function useRunningSession() {
         accumulatedMs: current.accumulatedMs + Date.now() - current.startedAt,
         startedAt: null,
         status: 'finished',
+        trackingStatus: 'idle',
       }
     })
   }, [])
@@ -146,7 +248,11 @@ export function useRunningSession() {
     pause,
     reset,
     resume,
+    routePointCount: session.routePoints.length,
+    routePoints: session.routePoints,
     start,
     status: session.status,
+    trackingError: session.trackingError,
+    trackingStatus: session.trackingStatus,
   }
 }

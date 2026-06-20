@@ -178,8 +178,19 @@ function App() {
 
           {running.status !== 'finished' && (
             <p className="running-note">
-              1차 버전은 상태 전환과 시간 기록을 먼저 검증합니다. GPS 거리
-              계산은 다음 단계에서 연결합니다.
+              {running.trackingStatus === 'tracking' &&
+                `화면이 켜진 동안 GPS 포인트 ${running.routePointCount}개를 기록하고 있어요.`}
+              {running.trackingStatus === 'paused' &&
+                `위치 추적을 잠시 멈췄어요. 현재 ${running.routePointCount}개 포인트가 있어요.`}
+              {running.trackingStatus === 'unsupported' &&
+                '이 브라우저에서는 실시간 위치 추적을 사용할 수 없어요.'}
+              {running.trackingStatus === 'error' &&
+                '위치 추적 중 오류가 발생했어요. 위치 권한과 GPS 상태를 확인해주세요.'}
+              {running.trackingStatus === 'idle' &&
+                '화면이 켜진 상태에서 위치 추적을 준비하고 있어요.'}
+              {running.trackingError && (
+                <span className="running-warning">{running.trackingError}</span>
+              )}
             </p>
           )}
 
