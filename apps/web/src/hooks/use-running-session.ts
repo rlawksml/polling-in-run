@@ -36,6 +36,7 @@ const initialSession: RunningSession = {
 }
 
 const MAX_TRACKING_ACCURACY_M = 80
+const EARTH_RADIUS_M = 6371000
 
 function getTrackingStartState(): Pick<
   RunningSession,
@@ -83,6 +84,27 @@ export function formatPace(elapsedMs: number, distanceM: number) {
   const paceMsPerKm = elapsedMs / (distanceM / 1000)
 
   return `${formatElapsedTime(paceMsPerKm)} /km`
+}
+
+function toRadians(degrees: number) {
+  return degrees * (Math.PI / 180)
+}
+
+export function calculateDistanceM(
+  from: Pick<RunLocationPoint, 'latitude' | 'longitude'>,
+  to: Pick<RunLocationPoint, 'latitude' | 'longitude'>,
+) {
+  const latitudeDelta = toRadians(to.latitude - from.latitude)
+  const longitudeDelta = toRadians(to.longitude - from.longitude)
+  const fromLatitude = toRadians(from.latitude)
+  const toLatitude = toRadians(to.latitude)
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(fromLatitude) *
+      Math.cos(toLatitude) *
+      Math.sin(longitudeDelta / 2) ** 2
+
+  return EARTH_RADIUS_M * 2 * Math.asin(Math.sqrt(haversine))
 }
 
 export function useRunningSession() {
@@ -133,17 +155,24 @@ export function useRunningSession() {
           return
         }
 
+        const nextPoint = {
+          accuracy: coords.accuracy,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          timestamp,
+        }
+
         setSession((current) => ({
           ...current,
-          routePoints: [
-            ...current.routePoints,
-            {
-              accuracy: coords.accuracy,
-              latitude: coords.latitude,
-              longitude: coords.longitude,
-              timestamp,
-            },
-          ],
+          distanceM:
+            current.routePoints.length > 0
+              ? current.distanceM +
+                calculateDistanceM(
+                  current.routePoints[current.routePoints.length - 1],
+                  nextPoint,
+                )
+              : current.distanceM,
+          routePoints: [...current.routePoints, nextPoint],
           trackingError: null,
         }))
       },

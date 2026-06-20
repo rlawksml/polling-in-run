@@ -231,6 +231,20 @@ describe('App', () => {
         timestamp: 1000,
         toJSON: () => ({}),
       })
+      success({
+        coords: {
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5675,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 2000,
+        toJSON: () => ({}),
+      })
 
       return 24
     })
@@ -254,14 +268,15 @@ describe('App', () => {
       },
     )
     expect(
-      await screen.findByText('화면이 켜진 동안 GPS 포인트 1개를 기록하고 있어요.'),
+      await screen.findByText('화면이 켜진 동안 GPS 포인트 2개를 기록하고 있어요.'),
     ).toBeInTheDocument()
+    expect(await screen.findByText('0.11 km')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '일시정지' }))
 
     expect(clearWatch).toHaveBeenCalledWith(24)
     expect(
-      screen.getByText('위치 추적을 잠시 멈췄어요. 현재 1개 포인트가 있어요.'),
+      screen.getByText('위치 추적을 잠시 멈췄어요. 현재 2개 포인트가 있어요.'),
     ).toBeInTheDocument()
   })
 })
