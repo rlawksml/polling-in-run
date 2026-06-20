@@ -194,4 +194,74 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '홈으로' }))
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
   })
+
+  it('tracks running location points while the screen is active', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+    const clearWatch = vi.fn()
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 1000,
+        toJSON: () => ({}),
+      })
+    })
+    const watchPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 1000,
+        toJSON: () => ({}),
+      })
+
+      return 24
+    })
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: { clearWatch, getCurrentPosition, watchPosition },
+    })
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '러닝 시작' }))
+
+    expect(watchPosition).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 10000,
+      },
+    )
+    expect(
+      await screen.findByText('화면이 켜진 동안 GPS 포인트 1개를 기록하고 있어요.'),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '일시정지' }))
+
+    expect(clearWatch).toHaveBeenCalledWith(24)
+    expect(
+      screen.getByText('위치 추적을 잠시 멈췄어요. 현재 1개 포인트가 있어요.'),
+    ).toBeInTheDocument()
+  })
 })
