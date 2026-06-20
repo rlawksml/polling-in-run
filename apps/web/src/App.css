@@ -460,6 +460,41 @@ button {
   font-weight: 900;
 }
 
+.running-memo-field {
+  display: grid;
+  gap: 8px;
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.running-memo-field textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 16px;
+  background: #ffffff;
+  color: #101828;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.running-memo-field textarea::placeholder {
+  color: #98a2b3;
+}
+
+.running-save-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #ecfdf3;
+  color: #027a48;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .running-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
