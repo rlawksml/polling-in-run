@@ -59,7 +59,7 @@ export function loadKakaoMaps(): Promise<typeof kakao.maps> {
     const script = document.createElement('script')
     script.id = KAKAO_SDK_ID
     script.async = true
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=clusterer`
     script.addEventListener('load', handleLoad, { once: true })
     script.addEventListener('error', handleError, { once: true })
     document.head.appendChild(script)

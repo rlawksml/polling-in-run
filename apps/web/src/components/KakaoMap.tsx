@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Facility } from '../api/facilities'
 import type { FacilityBounds } from '../api/facilities'
 import type { CurrentLocation } from '../hooks/use-current-location'
-import { getFacilityIconSvg } from '../lib/facility-icon-svg'
 import { loadKakaoMaps } from '../lib/kakao-maps'
 
 type KakaoMapProps = {
@@ -17,6 +16,22 @@ const SEOUL_CITY_HALL = {
   longitude: 126.978,
 }
 
+function createFacilityMarkerImage(type: Facility['type']) {
+  const background = type === 'water' ? '#2563eb' : '#101828'
+  const icon =
+    type === 'water'
+      ? '<path d="M18 4.2C15.7 7.6 12.2 10.8 12.2 15.4a5.8 5.8 0 0 0 11.6 0C23.8 10.8 20.3 7.6 18 4.2Z" fill="#fff"/><path d="M15.4 15.6c.2 1.5 1.2 2.4 2.8 2.7" fill="none" stroke="#2563eb" stroke-linecap="round" stroke-width="1.7"/>'
+      : '<circle cx="13.5" cy="9" r="2.1" fill="#fff"/><circle cx="22.5" cy="9" r="2.1" fill="#fff"/><path d="M10.6 13.1c0-1 .8-1.8 1.8-1.8h2.2c1 0 1.8.8 1.8 1.8v4.8h-1.6V25h-2.6v-7.1h-1.6v-4.8Z" fill="#fff"/><path d="M19.6 13.1c0-1 .8-1.8 1.8-1.8h2.2c1 0 1.8.8 1.8 1.8v4.8h-1.6V25h-2.6v-7.1h-1.6v-4.8Z" fill="#fff"/><path d="M18 7v18" fill="none" stroke="#fff" stroke-width="1.2" opacity=".45"/>'
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="16" fill="${background}" stroke="#fff" stroke-width="3"/>
+      <g transform="translate(0 0)">${icon}</g>
+    </svg>
+  `
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
 export function KakaoMap({
   facilities,
   location,
@@ -26,7 +41,8 @@ export function KakaoMap({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const markerRef = useRef<kakao.maps.Marker | null>(null)
-  const facilityOverlaysRef = useRef<kakao.maps.CustomOverlay[]>([])
+  const clustererRef = useRef<kakao.maps.MarkerClusterer | null>(null)
+  const facilityMarkersRef = useRef<kakao.maps.Marker[]>([])
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(
     null,
   )
@@ -195,20 +211,77 @@ export function KakaoMap({
   }, [isReady, location])
 
   useEffect(() => {
-    facilityOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
-    facilityOverlaysRef.current = []
+    clustererRef.current?.clear()
+    facilityMarkersRef.current.forEach((marker) => marker.setMap(null))
+    facilityMarkersRef.current = []
 
     if (!isReady || !mapRef.current || !window.kakao?.maps) {
       return
     }
 
-    facilityOverlaysRef.current = facilities.map((facility) => {
-      const marker = document.createElement('button')
-      marker.type = 'button'
-      marker.className = `facility-marker ${facility.type}`
-      marker.setAttribute('aria-label', facility.name)
-      marker.innerHTML = getFacilityIconSvg(facility.type)
-      marker.addEventListener('click', () => {
+    if (!clustererRef.current) {
+      clustererRef.current = new window.kakao.maps.MarkerClusterer({
+        map: mapRef.current,
+        averageCenter: true,
+        gridSize: 56,
+        minClusterSize: 3,
+        minLevel: 6,
+        styles: [
+          {
+            width: '42px',
+            height: '42px',
+            border: '3px solid #fff',
+            borderRadius: '50%',
+            background: 'rgba(16, 24, 40, 0.88)',
+            color: '#fff',
+            fontWeight: '800',
+            fontSize: '14px',
+            lineHeight: '42px',
+            textAlign: 'center',
+            boxShadow: '0 10px 24px rgba(16, 24, 40, 0.28)',
+          },
+          {
+            width: '48px',
+            height: '48px',
+            border: '3px solid #fff',
+            borderRadius: '50%',
+            background: 'rgba(37, 99, 235, 0.9)',
+            color: '#fff',
+            fontWeight: '800',
+            fontSize: '15px',
+            lineHeight: '48px',
+            textAlign: 'center',
+            boxShadow: '0 12px 28px rgba(37, 99, 235, 0.28)',
+          },
+        ],
+      })
+    }
+
+    const markerImages = {
+      restroom: new window.kakao.maps.MarkerImage(
+        createFacilityMarkerImage('restroom'),
+        new window.kakao.maps.Size(36, 36),
+        { offset: new window.kakao.maps.Point(18, 36) },
+      ),
+      water: new window.kakao.maps.MarkerImage(
+        createFacilityMarkerImage('water'),
+        new window.kakao.maps.Size(36, 36),
+        { offset: new window.kakao.maps.Point(18, 36) },
+      ),
+    }
+
+    facilityMarkersRef.current = facilities.map((facility) => {
+      const marker = new window.kakao!.maps.Marker({
+        position: new window.kakao!.maps.LatLng(
+          facility.latitude,
+          facility.longitude,
+        ),
+        image: markerImages[facility.type],
+        title: facility.name,
+        clickable: true,
+      })
+
+      window.kakao!.maps.event.addListener(marker, 'click', () => {
         setSelectedFacilityId(facility.id)
         mapRef.current?.panTo(
           new window.kakao!.maps.LatLng(
@@ -218,22 +291,15 @@ export function KakaoMap({
         )
       })
 
-      return new window.kakao!.maps.CustomOverlay({
-        map: mapRef.current!,
-        position: new window.kakao!.maps.LatLng(
-          facility.latitude,
-          facility.longitude,
-        ),
-        content: marker,
-        xAnchor: 0.5,
-        yAnchor: 1,
-        zIndex: 3,
-      })
+      return marker
     })
 
+    clustererRef.current.addMarkers(facilityMarkersRef.current)
+
     return () => {
-      facilityOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
-      facilityOverlaysRef.current = []
+      clustererRef.current?.clear()
+      facilityMarkersRef.current.forEach((marker) => marker.setMap(null))
+      facilityMarkersRef.current = []
     }
   }, [facilities, isReady])
 
