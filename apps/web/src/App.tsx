@@ -147,7 +147,10 @@ function App() {
       )}
 
       {isRunningSessionActive && (
-        <section className="running-panel" aria-label="러닝 진행">
+        <section
+          className={`running-panel ${running.status === 'finished' ? 'is-result' : ''}`}
+          aria-label={running.status === 'finished' ? '러닝 결과' : '러닝 진행'}
+        >
           <div>
             <p className="running-eyebrow">
               {running.status === 'running' && '러닝 진행 중'}
@@ -156,7 +159,7 @@ function App() {
             </p>
             <h1>
               {running.status === 'finished'
-                ? '오늘의 러닝을 저장할까요?'
+                ? '러닝 결과를 확인해요.'
                 : '호흡을 편하게 유지해요.'}
             </h1>
           </div>
@@ -194,6 +197,19 @@ function App() {
             </p>
           )}
 
+          {running.status === 'finished' && (
+            <section className="running-result-summary" aria-label="러닝 결과 요약">
+              <div>
+                <p className="result-label">오늘의 러닝 결과</p>
+                <h2>저장하기 전에 기록을 확인해요.</h2>
+              </div>
+              <p>
+                GPS 포인트 {running.routePointCount}개를 기반으로 거리와 평균 페이스를
+                계산했어요. 메모 저장은 다음 단계에서 연결합니다.
+              </p>
+            </section>
+          )}
+
           <div className="running-actions">
             {running.status === 'running' && (
               <Button type="button" className="secondary-action" onClick={running.pause}>
@@ -215,8 +231,8 @@ function App() {
                 <Button type="button" className="secondary-action" onClick={running.reset}>
                   홈으로
                 </Button>
-                <Button type="button" className="primary-action" onClick={running.reset}>
-                  기록 저장
+                <Button type="button" className="primary-action" disabled>
+                  기록 저장 준비 중
                 </Button>
               </>
             )}

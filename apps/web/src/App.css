@@ -364,6 +364,10 @@ button {
   backdrop-filter: blur(16px);
 }
 
+.running-panel.is-result {
+  gap: 16px;
+}
+
 .running-eyebrow {
   margin: 0 0 6px;
   color: #2563eb;
@@ -422,6 +426,38 @@ button {
   margin-top: 6px;
   color: #b42318;
   font-weight: 700;
+}
+
+.running-result-summary {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 18px;
+  background: #eff6ff;
+}
+
+.running-result-summary h2,
+.running-result-summary p {
+  margin: 0;
+}
+
+.running-result-summary h2 {
+  color: #101828;
+  font-size: 1rem;
+  letter-spacing: -0.025em;
+}
+
+.running-result-summary p {
+  color: #344054;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.result-label {
+  color: #2563eb;
+  font-size: 0.7rem;
+  font-weight: 900;
 }
 
 .running-actions {
