@@ -75,6 +75,7 @@ function renderApp() {
 describe('App', () => {
   afterEach(() => {
     cleanup()
+    window.localStorage.clear()
     vi.restoreAllMocks()
   })
 
@@ -192,7 +193,16 @@ describe('App', () => {
     expect(screen.getByText('러닝 결과를 확인해요.')).toBeInTheDocument()
     expect(screen.getByText('오늘의 러닝 결과')).toBeInTheDocument()
     expect(screen.getByText('저장하기 전에 기록을 확인해요.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '기록 저장 준비 중' })).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('러닝 메모'), {
+      target: { value: '가볍게 달린 날' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
+
+    expect(screen.getByText(/기록을 로컬에 저장했어요/)).toBeInTheDocument()
+    expect(window.localStorage.getItem('polling-in-run.records.v1')).toContain(
+      '가볍게 달린 날',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: '홈으로' }))
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()

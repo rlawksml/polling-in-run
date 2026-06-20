@@ -27,10 +27,14 @@ const locationMessages = {
   unsupported: '이 브라우저는 위치 기능을 지원하지 않아요.',
 }
 
+const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
+
 function App() {
   const { location, requestLocation, status } = useCurrentLocation()
   const running = useRunningSession()
   const [mapBounds, setMapBounds] = useState<FacilityBounds | null>(null)
+  const [runMemo, setRunMemo] = useState('')
+  const [recordSaveMessage, setRecordSaveMessage] = useState<string | null>(null)
   const facilities = useQuery({
     queryKey: [
       'facilities',
@@ -67,6 +71,36 @@ function App() {
         ? current.filter((currentType) => currentType !== type)
         : [...current, type],
     )
+  }
+
+  const resetRunningResult = () => {
+    setRunMemo('')
+    setRecordSaveMessage(null)
+    running.reset()
+  }
+
+  const saveRunningRecord = () => {
+    try {
+      const record = {
+        distanceM: Math.round(running.distanceM),
+        elapsedMs: running.elapsedMs,
+        id: `run-${Date.now()}`,
+        memo: runMemo.trim(),
+        pace: formatPace(running.elapsedMs, running.distanceM),
+        routePointCount: running.routePointCount,
+        savedAt: new Date().toISOString(),
+      }
+      const rawRecords = window.localStorage.getItem(RUN_RECORDS_STORAGE_KEY)
+      const records = rawRecords ? JSON.parse(rawRecords) : []
+
+      window.localStorage.setItem(
+        RUN_RECORDS_STORAGE_KEY,
+        JSON.stringify([record, ...records]),
+      )
+      setRecordSaveMessage('기록을 로컬에 저장했어요. 기록 목록 연결은 다음 단계에서 진행합니다.')
+    } catch {
+      setRecordSaveMessage('기록 저장에 실패했어요. 작성한 메모는 화면에 그대로 남아 있어요.')
+    }
   }
 
   return (
@@ -205,9 +239,27 @@ function App() {
               </div>
               <p>
                 GPS 포인트 {running.routePointCount}개를 기반으로 거리와 평균 페이스를
-                계산했어요. 메모 저장은 다음 단계에서 연결합니다.
+                계산했어요. 오늘의 느낌을 짧게 남겨둘 수 있어요.
               </p>
             </section>
+          )}
+
+          {running.status === 'finished' && (
+            <label className="running-memo-field">
+              <span>러닝 메모</span>
+              <textarea
+                value={runMemo}
+                onChange={(event) => setRunMemo(event.target.value)}
+                placeholder="오늘의 러닝 느낌, 기억하고 싶은 장소를 적어보세요."
+                rows={3}
+              />
+            </label>
+          )}
+
+          {recordSaveMessage && (
+            <p className="running-save-message" role="status">
+              {recordSaveMessage}
+            </p>
           )}
 
           <div className="running-actions">
@@ -228,11 +280,11 @@ function App() {
             )}
             {running.status === 'finished' && (
               <>
-                <Button type="button" className="secondary-action" onClick={running.reset}>
+                <Button type="button" className="secondary-action" onClick={resetRunningResult}>
                   홈으로
                 </Button>
-                <Button type="button" className="primary-action" disabled>
-                  기록 저장 준비 중
+                <Button type="button" className="primary-action" onClick={saveRunningRecord}>
+                  기록 저장
                 </Button>
               </>
             )}
