@@ -42,11 +42,47 @@ declare namespace kakao.maps {
 
   class Marker {
     constructor(options: {
-      map: Map
+      clickable?: boolean
+      image?: MarkerImage
+      map?: Map
       position: LatLng
+      title?: string
     })
     setMap(map: Map | null): void
     setPosition(position: LatLng): void
+  }
+
+  class MarkerImage {
+    constructor(
+      src: string,
+      size: Size,
+      options?: {
+        offset?: Point
+      },
+    )
+  }
+
+  class Size {
+    constructor(width: number, height: number)
+  }
+
+  class Point {
+    constructor(x: number, y: number)
+  }
+
+  class MarkerClusterer {
+    constructor(options: {
+      averageCenter?: boolean
+      disableClickZoom?: boolean
+      gridSize?: number
+      map: Map
+      markers?: Marker[]
+      minClusterSize?: number
+      minLevel?: number
+      styles?: Array<Record<string, string>>
+    })
+    addMarkers(markers: Marker[]): void
+    clear(): void
   }
 
   class CustomOverlay {
@@ -65,12 +101,12 @@ declare namespace kakao.maps {
 
   namespace event {
     function addListener(
-      target: Map,
+      target: Map | Marker | MarkerClusterer,
       type: string,
       callback: () => void,
     ): void
     function removeListener(
-      target: Map,
+      target: Map | Marker | MarkerClusterer,
       type: string,
       callback: () => void,
     ): void
