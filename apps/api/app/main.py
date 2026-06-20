@@ -564,6 +564,27 @@ def calculate_distance_m(
     return round(earth_radius_m * 2 * asin(sqrt(haversine)))
 
 
+def is_inside_bounds(
+    facility: FacilityResponse,
+    min_latitude: Optional[float],
+    max_latitude: Optional[float],
+    min_longitude: Optional[float],
+    max_longitude: Optional[float],
+) -> bool:
+    if (
+        min_latitude is None
+        or max_latitude is None
+        or min_longitude is None
+        or max_longitude is None
+    ):
+        return True
+
+    return (
+        min_latitude <= facility.latitude <= max_latitude
+        and min_longitude <= facility.longitude <= max_longitude
+    )
+
+
 @app.get(
     "/api/facilities",
     response_model=list[FacilityResponse],
@@ -574,11 +595,60 @@ def list_facilities(
     longitude: Optional[float] = Query(default=None, ge=-180, le=180),
     radius_m: int = Query(default=3000, ge=100, le=50000),
     facility_types: Optional[str] = Query(default=None, alias="type"),
+    min_latitude: Optional[float] = Query(default=None, ge=-90, le=90, alias="min_lat"),
+    max_latitude: Optional[float] = Query(default=None, ge=-90, le=90, alias="max_lat"),
+    min_longitude: Optional[float] = Query(
+        default=None,
+        ge=-180,
+        le=180,
+        alias="min_lng",
+    ),
+    max_longitude: Optional[float] = Query(
+        default=None,
+        ge=-180,
+        le=180,
+        alias="max_lng",
+    ),
 ) -> list[FacilityResponse]:
     if (latitude is None) != (longitude is None):
         raise HTTPException(
             status_code=422,
             detail="latitude and longitude must be provided together",
+        )
+
+    bounds_values = [
+        min_latitude,
+        max_latitude,
+        min_longitude,
+        max_longitude,
+    ]
+
+    if any(value is not None for value in bounds_values) and not all(
+        value is not None for value in bounds_values
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="min_lat, max_lat, min_lng, and max_lng must be provided together",
+        )
+
+    if (
+        min_latitude is not None
+        and max_latitude is not None
+        and min_latitude > max_latitude
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="min_lat must be less than or equal to max_lat",
+        )
+
+    if (
+        min_longitude is not None
+        and max_longitude is not None
+        and min_longitude > max_longitude
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="min_lng must be less than or equal to max_lng",
         )
 
     selected_types = (
@@ -607,13 +677,24 @@ def list_facilities(
         for facility in source_facilities
         if facility.type in selected_types
     ]
+    bounded_facilities = [
+        facility
+        for facility in facilities
+        if is_inside_bounds(
+            facility,
+            min_latitude,
+            max_latitude,
+            min_longitude,
+            max_longitude,
+        )
+    ]
 
     if latitude is None or longitude is None:
-        return facilities
+        return bounded_facilities
 
     nearby_facilities = []
 
-    for facility in facilities:
+    for facility in bounded_facilities:
         distance_m = calculate_distance_m(
             latitude,
             longitude,

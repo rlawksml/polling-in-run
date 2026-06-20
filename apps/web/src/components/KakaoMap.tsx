@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Facility } from '../api/facilities'
+import type { FacilityBounds } from '../api/facilities'
 import type { CurrentLocation } from '../hooks/use-current-location'
 import { getFacilityIconSvg } from '../lib/facility-icon-svg'
 import { loadKakaoMaps } from '../lib/kakao-maps'
@@ -7,6 +8,7 @@ import { loadKakaoMaps } from '../lib/kakao-maps'
 type KakaoMapProps = {
   facilities: Facility[]
   location: CurrentLocation | null
+  onBoundsChange: (bounds: FacilityBounds) => void
   onRequestLocation: () => void
 }
 
@@ -18,6 +20,7 @@ const SEOUL_CITY_HALL = {
 export function KakaoMap({
   facilities,
   location,
+  onBoundsChange,
   onRequestLocation,
 }: KakaoMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -31,6 +34,23 @@ export function KakaoMap({
   const [isReady, setIsReady] = useState(false)
   const selectedFacility =
     facilities.find((facility) => facility.id === selectedFacilityId) ?? null
+
+  const emitBoundsChange = useCallback(() => {
+    if (!mapRef.current) {
+      return
+    }
+
+    const bounds = mapRef.current.getBounds()
+    const southWest = bounds.getSouthWest()
+    const northEast = bounds.getNorthEast()
+
+    onBoundsChange({
+      minLatitude: southWest.getLat(),
+      maxLatitude: northEast.getLat(),
+      minLongitude: southWest.getLng(),
+      maxLongitude: northEast.getLng(),
+    })
+  }, [onBoundsChange])
 
   const moveToCurrentLocation = () => {
     if (!location || !mapRef.current || !window.kakao?.maps) {
@@ -111,6 +131,7 @@ export function KakaoMap({
           level: location ? 4 : 7,
         })
         setIsReady(true)
+        emitBoundsChange()
       })
       .catch((loadError: unknown) => {
         if (!cancelled) {
@@ -125,7 +146,31 @@ export function KakaoMap({
     return () => {
       cancelled = true
     }
-  }, [location])
+  }, [emitBoundsChange, location])
+
+  useEffect(() => {
+    if (!isReady || !mapRef.current || !window.kakao?.maps) {
+      return
+    }
+
+    window.kakao.maps.event.addListener(
+      mapRef.current,
+      'idle',
+      emitBoundsChange,
+    )
+
+    return () => {
+      if (!mapRef.current || !window.kakao?.maps) {
+        return
+      }
+
+      window.kakao.maps.event.removeListener(
+        mapRef.current,
+        'idle',
+        emitBoundsChange,
+      )
+    }
+  }, [emitBoundsChange, isReady])
 
   useEffect(() => {
     if (!location || !mapRef.current || !window.kakao?.maps) {

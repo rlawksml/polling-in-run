@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { getFacilities, type FacilityType } from './api/facilities'
+import {
+  getFacilities,
+  type FacilityBounds,
+  type FacilityType,
+} from './api/facilities'
 import { FacilityIcon } from './components/FacilityIcon'
 import { KakaoMap } from './components/KakaoMap'
 import { Button } from './components/ui/button'
@@ -26,14 +30,21 @@ const locationMessages = {
 function App() {
   const { location, requestLocation, status } = useCurrentLocation()
   const running = useRunningSession()
+  const [mapBounds, setMapBounds] = useState<FacilityBounds | null>(null)
   const facilities = useQuery({
-    queryKey: ['facilities', location?.latitude, location?.longitude],
+    queryKey: [
+      'facilities',
+      location?.latitude,
+      location?.longitude,
+      mapBounds,
+    ],
     queryFn: () =>
       getFacilities({
+        bounds: mapBounds,
         latitude: location?.latitude,
         longitude: location?.longitude,
       }),
-    enabled: status !== 'loading',
+    enabled: status !== 'loading' && mapBounds !== null,
   })
   const [visibleTypes, setVisibleTypes] = useState<FacilityType[]>([
     'water',
@@ -63,6 +74,7 @@ function App() {
       <KakaoMap
         facilities={visibleFacilities}
         location={location}
+        onBoundsChange={setMapBounds}
         onRequestLocation={requestLocation}
       />
 
@@ -110,7 +122,7 @@ function App() {
       {!isRunningSessionActive && (
         <div className="facility-status" aria-live="polite">
           {facilities.isPending && '시설 정보를 불러오는 중'}
-          {facilities.isSuccess && `샘플 시설 ${visibleFacilities.length}곳 표시 중`}
+          {facilities.isSuccess && `현재 영역 시설 ${visibleFacilities.length}곳 표시 중`}
           {facilities.isError && '시설 정보를 불러오지 못했어요'}
         </div>
       )}

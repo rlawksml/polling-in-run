@@ -15,7 +15,15 @@ export type Facility = {
   distance_m: number | null
 }
 
+export type FacilityBounds = {
+  minLatitude: number
+  maxLatitude: number
+  minLongitude: number
+  maxLongitude: number
+}
+
 type FacilityQuery = {
+  bounds?: FacilityBounds | null
   latitude?: number
   longitude?: number
   radiusM?: number
@@ -30,6 +38,13 @@ export async function getFacilities(
     searchParams.set('latitude', String(query.latitude))
     searchParams.set('longitude', String(query.longitude))
     searchParams.set('radius_m', String(query.radiusM ?? 3000))
+  }
+
+  if (query.bounds) {
+    searchParams.set('min_lat', String(query.bounds.minLatitude))
+    searchParams.set('max_lat', String(query.bounds.maxLatitude))
+    searchParams.set('min_lng', String(query.bounds.minLongitude))
+    searchParams.set('max_lng', String(query.bounds.maxLongitude))
   }
 
   const queryString = searchParams.toString()

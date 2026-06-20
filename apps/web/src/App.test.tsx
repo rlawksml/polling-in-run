@@ -3,13 +3,39 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
-vi.mock('./components/KakaoMap', () => ({
-  KakaoMap: ({ facilities }: { facilities: unknown[] }) => (
-    <div aria-label="현재 위치와 주변 편의시설 지도">
-      시설 {facilities.length}개
-    </div>
-  ),
-}))
+vi.mock('./components/KakaoMap', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
+
+  return {
+    KakaoMap: ({
+      facilities,
+      onBoundsChange,
+    }: {
+      facilities: unknown[]
+      onBoundsChange: (bounds: {
+        maxLatitude: number
+        maxLongitude: number
+        minLatitude: number
+        minLongitude: number
+      }) => void
+    }) => {
+      React.useEffect(() => {
+        onBoundsChange({
+          maxLatitude: 37.58,
+          maxLongitude: 127,
+          minLatitude: 37.55,
+          minLongitude: 126.96,
+        })
+      }, [onBoundsChange])
+
+      return (
+        <div aria-label="현재 위치와 주변 편의시설 지도">
+          시설 {facilities.length}개
+        </div>
+      )
+    },
+  }
+})
 
 const facilityResponse = [
   {
@@ -81,12 +107,12 @@ describe('App', () => {
     renderApp()
 
     expect(await screen.findByText('현재 위치를 중심으로 지도를 보여드려요.')).toBeInTheDocument()
-    expect(await screen.findByText('샘플 시설 2곳 표시 중')).toBeInTheDocument()
+    expect(await screen.findByText('현재 영역 시설 2곳 표시 중')).toBeInTheDocument()
     expect(screen.getByText('시설 2개')).toBeInTheDocument()
     expect(screen.getByText('약 12m 정확도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith(
-      '/api/facilities?latitude=37.5665&longitude=126.978&radius_m=3000',
+      '/api/facilities?latitude=37.5665&longitude=126.978&radius_m=3000&min_lat=37.55&max_lat=37.58&min_lng=126.96&max_lng=127',
     )
   })
 
@@ -131,9 +157,9 @@ describe('App', () => {
 
     renderApp()
 
-    expect(await screen.findByText('샘플 시설 2곳 표시 중')).toBeInTheDocument()
+    expect(await screen.findByText('현재 영역 시설 2곳 표시 중')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '음수대' }))
-    expect(screen.getByText('샘플 시설 1곳 표시 중')).toBeInTheDocument()
+    expect(screen.getByText('현재 영역 시설 1곳 표시 중')).toBeInTheDocument()
   })
 
   it('moves through the first running session flow', async () => {
