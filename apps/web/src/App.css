@@ -720,6 +720,17 @@ button {
   font-size: 0.76rem;
 }
 
+.auth-setup-notice {
+  margin: 0 !important;
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: 16px;
+  background: #fffbeb;
+  color: #92400e !important;
+  font-size: 0.78rem !important;
+  font-weight: 800;
+}
+
 .auth-message {
   margin: 0 !important;
   padding: 10px 12px;
@@ -730,6 +741,34 @@ button {
   font-weight: 800;
 }
 
+.auth-profile-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #101828;
+  color: #ffffff;
+}
+
+.auth-profile-card h2,
+.auth-profile-card p {
+  margin: 0;
+}
+
+.auth-profile-card h2 {
+  font-size: 1.25rem;
+  letter-spacing: -0.04em;
+}
+
+.auth-profile-card p:not(.result-label) {
+  color: #d0d5dd;
+}
+
+.auth-profile-card .auth-submit {
+  background: #ffffff;
+  color: #101828;
+}
+
 .auth-submit {
   min-height: 48px;
   border-radius: 15px;
@@ -737,6 +776,11 @@ button {
   color: #ffffff;
   font-size: 0.9rem;
   font-weight: 900;
+}
+
+.auth-submit:disabled {
+  opacity: 0.56;
+  cursor: wait;
 }
 
 .running-actions {
