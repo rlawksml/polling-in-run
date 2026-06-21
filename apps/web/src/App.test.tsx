@@ -298,4 +298,42 @@ describe('App', () => {
       screen.getByText('위치 추적을 잠시 멈췄어요. 현재 2개 포인트가 있어요.'),
     ).toBeInTheDocument()
   })
+
+  it('shows the auth form shell and validates inputs on My page', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '마이' }))
+
+    expect(screen.getByText('ID/PW로 기록을 이어갈 준비')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
+    expect(screen.getByText(/비밀번호 찾기, 이메일 인증, 소셜 로그인/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
+    expect(screen.getByText('ID는 4자 이상 입력해주세요.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('ID'), {
+      target: { value: 'runner' },
+    })
+    fireEvent.change(screen.getByLabelText('비밀번호'), {
+      target: { value: '1234567' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
+    expect(screen.getByText('비밀번호는 8자 이상 입력해주세요.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('비밀번호'), {
+      target: { value: '12345678' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[0])
+    expect(screen.getByRole('heading', { name: '회원가입' })).toBeInTheDocument()
+    expect(screen.getByLabelText('비밀번호 확인')).toBeInTheDocument()
+  })
 })
