@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -36,6 +36,32 @@ vi.mock('./components/KakaoMap', async () => {
     },
   }
 })
+
+const authMockState = vi.hoisted(() => ({
+  session: null as { email: string | null; userId: string } | null,
+}))
+
+vi.mock('./api/auth', () => ({
+  getCurrentAuthSession: vi.fn(() => Promise.resolve(authMockState.session)),
+  isSupabaseConfigured: false,
+  isValidUserId: vi.fn((userId: string) =>
+    /^[a-z0-9_-]{4,24}$/.test(userId.trim().toLowerCase()),
+  ),
+  signInWithUserId: vi.fn(() =>
+    Promise.resolve({
+      message: 'Supabase 환경변수를 설정하면 로그인을 진행할 수 있어요.',
+      session: null,
+    }),
+  ),
+  signOut: vi.fn(() => Promise.resolve()),
+  signUpWithUserId: vi.fn(() =>
+    Promise.resolve({
+      message: 'Supabase 환경변수를 설정하면 회원가입을 진행할 수 있어요.',
+      session: null,
+    }),
+  ),
+  subscribeAuthSession: vi.fn(() => () => undefined),
+}))
 
 const facilityResponse = [
   {
@@ -75,6 +101,7 @@ function renderApp() {
 describe('App', () => {
   afterEach(() => {
     cleanup()
+    authMockState.session = null
     window.localStorage.clear()
     vi.restoreAllMocks()
   })
@@ -209,9 +236,55 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '기록' }))
 
+    expect(screen.getByText('ID/PW로 기록을 이어갈 준비')).toBeInTheDocument()
+    expect(screen.getByText('러닝 기록은 로그인 후 확인할 수 있어요.')).toBeInTheDocument()
+  })
+
+  it('lets a signed-in user open and delete a saved running record', async () => {
+    authMockState.session = {
+      email: 'runner@polling-in-run.local',
+      userId: 'runner',
+    }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+    window.localStorage.setItem(
+      'polling-in-run.records.v1',
+      JSON.stringify([
+        {
+          distanceM: 1200,
+          elapsedMs: 360000,
+          id: 'run-1',
+          memo: '삭제할 기록',
+          pace: '5:00 /km',
+          routePointCount: 12,
+          savedAt: '2026-06-21T00:00:00.000Z',
+        },
+      ]),
+    )
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '마이' }))
+    await screen.findByLabelText('로그인 상태')
+
+    fireEvent.click(screen.getByRole('button', { name: '기록' }))
+
     expect(screen.getByText('저장한 러닝 기록')).toBeInTheDocument()
-    expect(screen.getByLabelText('러닝 기록 목록')).toHaveTextContent('0.00 km')
-    expect(screen.getByLabelText('러닝 기록 상세')).toHaveTextContent('가볍게 달린 날')
+    fireEvent.click(screen.getByText('1.20 km'))
+    expect(screen.getByLabelText('러닝 기록 상세')).toHaveTextContent('삭제할 기록')
+
+    fireEvent.click(screen.getByRole('button', { name: '기록 삭제' }))
+
+    expect(screen.getByText('아직 저장한 기록이 없어요.')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(window.localStorage.getItem('polling-in-run.records.v1')).toBe('[]'),
+    )
   })
 
   it('tracks running location points while the screen is active', async () => {

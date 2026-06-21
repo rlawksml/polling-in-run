@@ -168,7 +168,7 @@ function App() {
 
   const saveRunningRecord = () => {
     try {
-    const record = {
+      const record = {
         distanceM: Math.round(running.distanceM),
         elapsedMs: running.elapsedMs,
         id: `run-${Date.now()}`,
@@ -190,6 +190,17 @@ function App() {
     } catch {
       setRecordSaveMessage('기록 저장에 실패했어요. 작성한 메모는 화면에 그대로 남아 있어요.')
     }
+  }
+
+  const deleteRunRecord = (recordId: string) => {
+    const nextRecords = runRecords.filter((record) => record.id !== recordId)
+
+    window.localStorage.setItem(
+      RUN_RECORDS_STORAGE_KEY,
+      JSON.stringify(nextRecords),
+    )
+    setRunRecords(nextRecords)
+    setSelectedRecordId(nextRecords[0]?.id ?? null)
   }
 
   const submitAuthForm = async (event: FormEvent<HTMLFormElement>) => {
@@ -251,6 +262,17 @@ function App() {
           : '로그아웃을 처리하지 못했어요.',
       )
     }
+  }
+
+  const openRecordsTab = () => {
+    if (!authSession) {
+      setActiveTab('my')
+      setAuthMode('login')
+      setAuthMessage('러닝 기록은 로그인 후 확인할 수 있어요.')
+      return
+    }
+
+    setActiveTab('records')
   }
 
   return (
@@ -385,6 +407,13 @@ function App() {
                     </div>
                   </dl>
                   <p>{selectedRecord.memo || '남긴 메모가 없어요.'}</p>
+                  <Button
+                    type="button"
+                    className="record-delete-button"
+                    onClick={() => deleteRunRecord(selectedRecord.id)}
+                  >
+                    기록 삭제
+                  </Button>
                 </article>
               )}
             </div>
@@ -632,7 +661,7 @@ function App() {
             variant="ghost"
             className={activeTab === 'records' ? 'is-active' : ''}
             type="button"
-            onClick={() => setActiveTab('records')}
+            onClick={openRecordsTab}
           >
             기록
           </Button>
