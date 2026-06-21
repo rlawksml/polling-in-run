@@ -3,6 +3,9 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const DEFAULT_AUTH_EMAIL_DOMAIN = 'polling-in-run.local'
 
+const DEFAULT_AUTH_ERROR_MESSAGE =
+  '인증 요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.'
+
 export type AuthSession = {
   email: string | null
   userId: string
@@ -26,6 +29,54 @@ export function userIdToAuthEmail(userId: string): string {
     import.meta.env.VITE_AUTH_EMAIL_DOMAIN?.trim() || DEFAULT_AUTH_EMAIL_DOMAIN
 
   return `${normalizeUserId(userId)}@${domain}`
+}
+
+export function formatAuthErrorMessage(message?: string | null): string {
+  const normalizedMessage = message?.toLowerCase() ?? ''
+
+  if (!normalizedMessage) {
+    return DEFAULT_AUTH_ERROR_MESSAGE
+  }
+
+  if (
+    normalizedMessage.includes('already registered') ||
+    normalizedMessage.includes('already exists') ||
+    normalizedMessage.includes('user already')
+  ) {
+    return '이미 사용 중인 ID예요. 다른 ID를 입력해주세요.'
+  }
+
+  if (normalizedMessage.includes('invalid login credentials')) {
+    return 'ID 또는 비밀번호를 확인해주세요.'
+  }
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return '이 계정은 아직 인증 확인이 필요해요. Supabase 이메일 확인 설정을 확인해주세요.'
+  }
+
+  if (
+    normalizedMessage.includes('password should be at least') ||
+    normalizedMessage.includes('weak password')
+  ) {
+    return '비밀번호 조건을 확인해주세요. 8자 이상 입력해야 해요.'
+  }
+
+  if (
+    normalizedMessage.includes('rate limit') ||
+    normalizedMessage.includes('too many requests') ||
+    normalizedMessage.includes('too many')
+  ) {
+    return '요청이 너무 많아요. 잠시 후 다시 시도해주세요.'
+  }
+
+  if (
+    normalizedMessage.includes('failed to fetch') ||
+    normalizedMessage.includes('network')
+  ) {
+    return '네트워크 상태를 확인한 뒤 다시 시도해주세요.'
+  }
+
+  return DEFAULT_AUTH_ERROR_MESSAGE
 }
 
 export function sessionToAuthSession(session: Session | null): AuthSession | null {
@@ -89,7 +140,7 @@ export async function signUpWithUserId(
   })
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(formatAuthErrorMessage(error.message))
   }
 
   return {
@@ -117,7 +168,7 @@ export async function signInWithUserId(
   })
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(formatAuthErrorMessage(error.message))
   }
 
   return {
@@ -134,7 +185,7 @@ export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut()
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(formatAuthErrorMessage(error.message))
   }
 }
 
