@@ -9,11 +9,16 @@
 | [`../README.md`](../README.md) | 프로젝트 소개, 기술 스택, 실행 방법 |
 | [`../DESIGN.md`](../DESIGN.md) | 제품 디자인 원칙과 전체 화면 정의 |
 | [`../TODO.md`](../TODO.md) | 현재 우선순위와 작업 체크리스트 |
+| [`project-status.md`](./project-status.md) | 지금까지 완료된 기능, 남은 작업, 다음 작업 요약 |
 | `pages/` | 사용자가 보는 화면별 목적과 상태 |
 | `features/` | 여러 화면을 가로지르는 기능과 기술 결정 |
 | `data-sources/` | 외부 데이터 출처, 라이선스, 수집·정규화 방식 |
 | `qa/` | 모바일 실기기, 배포 전 동작 확인 체크리스트 |
 | `blog/` | 개발 과정을 블로그·포트폴리오 글로 옮기기 위한 초안 |
+
+## Project Status
+
+- [`현재 진행 정리`](./project-status.md)
 
 ## Pages
 
