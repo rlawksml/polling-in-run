@@ -618,6 +618,15 @@ button {
   color: #93c5fd;
 }
 
+.record-delete-button {
+  min-height: 44px;
+  border-radius: 14px;
+  background: #fee4e2;
+  color: #b42318;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .my-panel {
   position: absolute;
   z-index: 3;
