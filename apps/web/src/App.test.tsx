@@ -206,6 +206,12 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '홈으로' }))
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '기록' }))
+
+    expect(screen.getByText('저장한 러닝 기록')).toBeInTheDocument()
+    expect(screen.getByLabelText('러닝 기록 목록')).toHaveTextContent('0.00 km')
+    expect(screen.getByLabelText('러닝 기록 상세')).toHaveTextContent('가볍게 달린 날')
   })
 
   it('tracks running location points while the screen is active', async () => {

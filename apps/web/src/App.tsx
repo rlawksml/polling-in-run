@@ -29,12 +29,39 @@ const locationMessages = {
 
 const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 
+type AppTab = 'home' | 'records' | 'my'
+
+type RunRecord = {
+  distanceM: number
+  elapsedMs: number
+  id: string
+  memo: string
+  pace: string
+  routePointCount: number
+  savedAt: string
+}
+
+function readRunRecords(): RunRecord[] {
+  try {
+    const rawRecords = window.localStorage.getItem(RUN_RECORDS_STORAGE_KEY)
+
+    return rawRecords ? JSON.parse(rawRecords) : []
+  } catch {
+    return []
+  }
+}
+
 function App() {
   const { location, requestLocation, status } = useCurrentLocation()
   const running = useRunningSession()
   const [mapBounds, setMapBounds] = useState<FacilityBounds | null>(null)
   const [runMemo, setRunMemo] = useState('')
   const [recordSaveMessage, setRecordSaveMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<AppTab>('home')
+  const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
+    readRunRecords(),
+  )
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const facilities = useQuery({
     queryKey: [
       'facilities',
@@ -64,6 +91,8 @@ function App() {
     visibleTypes.includes(facility.type),
   )
   const isRunningSessionActive = running.status !== 'idle'
+  const selectedRecord =
+    runRecords.find((record) => record.id === selectedRecordId) ?? null
 
   const toggleFacilityType = (type: FacilityType) => {
     setVisibleTypes((current) =>
@@ -81,7 +110,7 @@ function App() {
 
   const saveRunningRecord = () => {
     try {
-      const record = {
+    const record = {
         distanceM: Math.round(running.distanceM),
         elapsedMs: running.elapsedMs,
         id: `run-${Date.now()}`,
@@ -90,14 +119,16 @@ function App() {
         routePointCount: running.routePointCount,
         savedAt: new Date().toISOString(),
       }
-      const rawRecords = window.localStorage.getItem(RUN_RECORDS_STORAGE_KEY)
-      const records = rawRecords ? JSON.parse(rawRecords) : []
+      const records = readRunRecords()
+      const nextRecords = [record, ...records]
 
       window.localStorage.setItem(
         RUN_RECORDS_STORAGE_KEY,
-        JSON.stringify([record, ...records]),
+        JSON.stringify(nextRecords),
       )
-      setRecordSaveMessage('기록을 로컬에 저장했어요. 기록 목록 연결은 다음 단계에서 진행합니다.')
+      setRunRecords(nextRecords)
+      setSelectedRecordId(record.id)
+      setRecordSaveMessage('기록을 로컬에 저장했어요. 하단 기록 탭에서 다시 볼 수 있어요.')
     } catch {
       setRecordSaveMessage('기록 저장에 실패했어요. 작성한 메모는 화면에 그대로 남아 있어요.')
     }
@@ -124,7 +155,7 @@ function App() {
         </header>
       )}
 
-      {!isRunningSessionActive && (
+      {!isRunningSessionActive && activeTab === 'home' && (
         <section className="facility-filter" aria-label="편의시설 필터">
           <Button
             variant="outline"
@@ -153,7 +184,7 @@ function App() {
         </section>
       )}
 
-      {!isRunningSessionActive && (
+      {!isRunningSessionActive && activeTab === 'home' && (
         <div className="facility-status" aria-live="polite">
           {facilities.isPending && '시설 정보를 불러오는 중'}
           {facilities.isSuccess && `현재 영역 시설 ${visibleFacilities.length}곳 표시 중`}
@@ -161,7 +192,7 @@ function App() {
         </div>
       )}
 
-      {!isRunningSessionActive && (
+      {!isRunningSessionActive && activeTab === 'home' && (
         <section className={`location-card ${hasLocationError ? 'is-error' : ''}`}>
           <div>
             <p className="location-label">현재 위치</p>
@@ -176,6 +207,63 @@ function App() {
             <Button type="button" onClick={requestLocation}>
               다시 시도
             </Button>
+          )}
+        </section>
+      )}
+
+      {!isRunningSessionActive && activeTab === 'records' && (
+        <section className="records-panel" aria-label="러닝 기록">
+          <div>
+            <p className="eyebrow">RECORDS</p>
+            <h1>저장한 러닝 기록</h1>
+          </div>
+
+          {runRecords.length === 0 && (
+            <div className="records-empty">
+              <strong>아직 저장한 기록이 없어요.</strong>
+              <span>러닝을 종료한 뒤 메모와 함께 첫 기록을 남겨보세요.</span>
+            </div>
+          )}
+
+          {runRecords.length > 0 && (
+            <div className="records-layout">
+              <div className="record-list" aria-label="러닝 기록 목록">
+                {runRecords.map((record) => (
+                  <button
+                    key={record.id}
+                    type="button"
+                    className={record.id === selectedRecordId ? 'is-selected' : ''}
+                    onClick={() => setSelectedRecordId(record.id)}
+                  >
+                    <span>{new Date(record.savedAt).toLocaleDateString('ko-KR')}</span>
+                    <strong>{formatDistance(record.distanceM)}</strong>
+                    <small>{formatElapsedTime(record.elapsedMs)} · {record.pace}</small>
+                  </button>
+                ))}
+              </div>
+
+              {selectedRecord && (
+                <article className="record-detail" aria-label="러닝 기록 상세">
+                  <p className="result-label">기록 상세</p>
+                  <h2>{formatDistance(selectedRecord.distanceM)}</h2>
+                  <dl>
+                    <div>
+                      <dt>시간</dt>
+                      <dd>{formatElapsedTime(selectedRecord.elapsedMs)}</dd>
+                    </div>
+                    <div>
+                      <dt>평균 페이스</dt>
+                      <dd>{selectedRecord.pace}</dd>
+                    </div>
+                    <div>
+                      <dt>GPS 포인트</dt>
+                      <dd>{selectedRecord.routePointCount}개</dd>
+                    </div>
+                  </dl>
+                  <p>{selectedRecord.memo || '남긴 메모가 없어요.'}</p>
+                </article>
+              )}
+            </div>
           )}
         </section>
       )}
@@ -292,7 +380,7 @@ function App() {
         </section>
       )}
 
-      {!isRunningSessionActive && (
+      {!isRunningSessionActive && activeTab === 'home' && (
         <Button className="start-button" type="button" onClick={running.start}>
           러닝 시작
         </Button>
@@ -300,11 +388,30 @@ function App() {
 
       {!isRunningSessionActive && (
         <nav className="bottom-nav" aria-label="주요 메뉴">
-          <Button variant="ghost" className="is-active" type="button">
+          <Button
+            variant="ghost"
+            className={activeTab === 'home' ? 'is-active' : ''}
+            type="button"
+            onClick={() => setActiveTab('home')}
+          >
             홈
           </Button>
-          <Button variant="ghost" type="button">기록</Button>
-          <Button variant="ghost" type="button">마이</Button>
+          <Button
+            variant="ghost"
+            className={activeTab === 'records' ? 'is-active' : ''}
+            type="button"
+            onClick={() => setActiveTab('records')}
+          >
+            기록
+          </Button>
+          <Button
+            variant="ghost"
+            className={activeTab === 'my' ? 'is-active' : ''}
+            type="button"
+            onClick={() => setActiveTab('my')}
+          >
+            마이
+          </Button>
         </nav>
       )}
     </main>

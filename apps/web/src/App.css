@@ -495,6 +495,129 @@ button {
   font-weight: 800;
 }
 
+.records-panel {
+  position: absolute;
+  z-index: 3;
+  right: 16px;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  left: 16px;
+  display: grid;
+  max-height: 66vh;
+  gap: 16px;
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 22px 60px rgba(16, 24, 40, 0.2);
+  backdrop-filter: blur(16px);
+}
+
+.records-panel h1 {
+  margin: 0;
+  color: #101828;
+  font-size: 1.25rem;
+  letter-spacing: -0.04em;
+}
+
+.records-empty {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 0.84rem;
+}
+
+.records-empty strong {
+  color: #101828;
+}
+
+.records-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.record-list {
+  display: grid;
+  gap: 10px;
+}
+
+.record-list button {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #101828;
+  text-align: left;
+}
+
+.record-list button.is-selected {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: #eff6ff;
+}
+
+.record-list span,
+.record-list small {
+  color: #667085;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.record-list strong {
+  font-size: 1.1rem;
+  font-weight: 950;
+}
+
+.record-detail {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #101828;
+  color: #ffffff;
+}
+
+.record-detail h2,
+.record-detail p,
+.record-detail dl {
+  margin: 0;
+}
+
+.record-detail h2 {
+  font-size: 1.45rem;
+}
+
+.record-detail dl {
+  display: grid;
+  gap: 8px;
+}
+
+.record-detail dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.record-detail dt {
+  color: #d0d5dd;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.record-detail dd {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.record-detail .result-label {
+  color: #93c5fd;
+}
+
 .running-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
