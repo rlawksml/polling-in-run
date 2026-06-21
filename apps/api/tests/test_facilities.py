@@ -1,3 +1,4 @@
+import httpx
 from fastapi.testclient import TestClient
 
 from app import main
@@ -90,6 +91,29 @@ def test_normalize_public_restroom_accepts_truncated_dbf_columns() -> None:
 
 def use_sample_facilities(monkeypatch) -> None:
     monkeypatch.setattr(main, "load_facilities", lambda: main.SAMPLE_FACILITIES)
+
+
+def test_load_facilities_falls_back_per_source(monkeypatch) -> None:
+    restroom = main.Facility(
+        id="restroom-real-1",
+        type="restroom",
+        name="실제 화장실",
+        latitude=37.5658,
+        longitude=126.9773,
+        address="서울특별시 중구 세종대로 110",
+        source="geomarket-restrooms",
+    )
+
+    def raise_water_timeout() -> list[main.Facility]:
+        raise httpx.TimeoutException("timed out")
+
+    monkeypatch.setattr(main, "load_seoul_water_fountains", raise_water_timeout)
+    monkeypatch.setattr(main, "load_seoul_public_restrooms", lambda: [restroom])
+
+    facilities = main.load_facilities()
+
+    assert any(facility.source == "sample" for facility in facilities)
+    assert any(facility.id == "restroom-real-1" for facility in facilities)
 
 
 def test_list_facilities_uses_a_common_model(monkeypatch) -> None:

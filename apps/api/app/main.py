@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 SEOUL_OPEN_DATA_BASE_URL = "http://openapi.seoul.go.kr:8088"
 SEOUL_WATER_FOUNTAIN_SERVICE = "TbViewGisArisu"
 SEOUL_OPEN_DATA_PAGE_SIZE = 1000
+SEOUL_OPEN_DATA_TIMEOUT_SECONDS = 3
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SEOUL_RESTROOM_XLSX_PATH = (
     PROJECT_ROOT / "data" / "raw" / "restrooms" / "seoul-public-restrooms.xlsx"
@@ -433,7 +434,7 @@ def fetch_seoul_water_fountain_page(
 ) -> tuple[int, list[dict[str, str]]]:
     response = httpx.get(
         build_water_fountain_url(api_key, start, end),
-        timeout=10,
+        timeout=SEOUL_OPEN_DATA_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     payload = response.json()
@@ -502,23 +503,39 @@ def load_seoul_public_restrooms() -> list[Facility]:
     ]
 
 
+def sample_facilities_by_type(
+    facility_type: Literal["water", "restroom"],
+) -> list[Facility]:
+    return [
+        facility for facility in SAMPLE_FACILITIES if facility.type == facility_type
+    ]
+
+
+def load_facility_source(
+    loader,
+    fallback_facilities: list[Facility],
+) -> list[Facility]:
+    try:
+        facilities = loader()
+    except (httpx.HTTPError, RuntimeError):
+        return fallback_facilities
+
+    return facilities or fallback_facilities
+
+
 def load_facilities() -> list[Facility]:
-    water_facilities = load_seoul_water_fountains()
-    restroom_facilities = load_seoul_public_restrooms()
-
-    if not water_facilities and not restroom_facilities:
-        return SAMPLE_FACILITIES
-
-    sample_water_facilities = [
-        facility for facility in SAMPLE_FACILITIES if facility.type == "water"
-    ]
-    sample_restroom_facilities = [
-        facility for facility in SAMPLE_FACILITIES if facility.type == "restroom"
-    ]
+    water_facilities = load_facility_source(
+        load_seoul_water_fountains,
+        sample_facilities_by_type("water"),
+    )
+    restroom_facilities = load_facility_source(
+        load_seoul_public_restrooms,
+        sample_facilities_by_type("restroom"),
+    )
 
     return [
-        *(water_facilities or sample_water_facilities),
-        *(restroom_facilities or sample_restroom_facilities),
+        *water_facilities,
+        *restroom_facilities,
     ]
 
 
