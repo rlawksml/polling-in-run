@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  getCurrentAuthSession,
+  isSupabaseConfigured,
+  isValidUserId,
+  signInWithUserId,
+  signOut,
+  signUpWithUserId,
+  subscribeAuthSession,
+  type AuthSession,
+} from './api/auth'
 import {
   getFacilities,
   type FacilityBounds,
@@ -59,8 +69,8 @@ function validateAuthForm(
   password: string,
   passwordConfirm: string,
 ): string | null {
-  if (userId.trim().length < 4) {
-    return 'ID는 4자 이상 입력해주세요.'
+  if (!isValidUserId(userId)) {
+    return 'ID는 영문 소문자, 숫자, -, _ 조합으로 4~24자 입력해주세요.'
   }
 
   if (password.length < 8) {
@@ -86,6 +96,8 @@ function App() {
   const [authPassword, setAuthPassword] = useState('')
   const [authPasswordConfirm, setAuthPasswordConfirm] = useState('')
   const [authMessage, setAuthMessage] = useState<string | null>(null)
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null)
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false)
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
     readRunRecords(),
   )
@@ -122,6 +134,23 @@ function App() {
   const selectedRecord =
     runRecords.find((record) => record.id === selectedRecordId) ?? null
   const authTitle = authMode === 'login' ? '로그인' : '회원가입'
+
+  useEffect(() => {
+    let isMounted = true
+
+    getCurrentAuthSession().then((session) => {
+      if (isMounted) {
+        setAuthSession(session)
+      }
+    })
+
+    const unsubscribe = subscribeAuthSession(setAuthSession)
+
+    return () => {
+      isMounted = false
+      unsubscribe()
+    }
+  }, [])
 
   const toggleFacilityType = (type: FacilityType) => {
     setVisibleTypes((current) =>
@@ -163,7 +192,7 @@ function App() {
     }
   }
 
-  const submitAuthForm = (event: FormEvent<HTMLFormElement>) => {
+  const submitAuthForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const validationMessage = validateAuthForm(
@@ -178,11 +207,29 @@ function App() {
       return
     }
 
-    setAuthMessage(
-      authMode === 'login'
-        ? 'Supabase Auth 연결 후 이 ID로 로그인을 시도할 예정이에요.'
-        : 'Supabase Auth 연결 후 이 ID로 회원가입을 처리할 예정이에요.',
-    )
+    try {
+      setIsAuthSubmitting(true)
+      const result =
+        authMode === 'login'
+          ? await signInWithUserId(authUserId, authPassword)
+          : await signUpWithUserId(authUserId, authPassword)
+
+      setAuthMessage(result.message)
+
+      if (result.session) {
+        setAuthSession(result.session)
+        setAuthPassword('')
+        setAuthPasswordConfirm('')
+      }
+    } catch (error) {
+      setAuthMessage(
+        error instanceof Error
+          ? error.message
+          : '인증 요청을 처리하지 못했어요.',
+      )
+    } finally {
+      setIsAuthSubmitting(false)
+    }
   }
 
   const switchAuthMode = (mode: AuthMode) => {
@@ -190,6 +237,20 @@ function App() {
     setAuthPassword('')
     setAuthPasswordConfirm('')
     setAuthMessage(null)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      setAuthSession(null)
+      setAuthMessage('로그아웃했어요.')
+    } catch (error) {
+      setAuthMessage(
+        error instanceof Error
+          ? error.message
+          : '로그아웃을 처리하지 못했어요.',
+      )
+    }
   }
 
   return (
@@ -337,79 +398,105 @@ function App() {
             <p className="eyebrow">MY PAGE</p>
             <h1>ID/PW로 기록을 이어갈 준비</h1>
             <p>
-              지금은 Supabase Auth 연결 전 단계라 비밀번호를 저장하지 않고,
-              입력 화면과 검증 흐름만 먼저 확인해요.
+              Supabase Auth로 세션을 관리하고, ID는 내부 인증 이메일로 변환해
+              처리해요.
             </p>
           </div>
 
-          <div className="auth-mode-switch" aria-label="인증 모드 선택">
-            <Button
-              type="button"
-              variant="ghost"
-              className={authMode === 'login' ? 'is-active' : ''}
-              aria-pressed={authMode === 'login'}
-              onClick={() => switchAuthMode('login')}
-            >
-              로그인
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className={authMode === 'signup' ? 'is-active' : ''}
-              aria-pressed={authMode === 'signup'}
-              onClick={() => switchAuthMode('signup')}
-            >
-              회원가입
-            </Button>
-          </div>
-
-          <form className="auth-form" onSubmit={submitAuthForm}>
-            <h2>{authTitle}</h2>
-            <label>
-              <span>ID</span>
-              <input
-                value={authUserId}
-                onChange={(event) => setAuthUserId(event.target.value)}
-                autoComplete="username"
-                placeholder="runner-id"
-              />
-            </label>
-            <label>
-              <span>비밀번호</span>
-              <input
-                value={authPassword}
-                onChange={(event) => setAuthPassword(event.target.value)}
-                autoComplete={
-                  authMode === 'login' ? 'current-password' : 'new-password'
-                }
-                type="password"
-                placeholder="8자 이상"
-              />
-            </label>
-            {authMode === 'signup' && (
-              <label>
-                <span>비밀번호 확인</span>
-                <input
-                  value={authPasswordConfirm}
-                  onChange={(event) => setAuthPasswordConfirm(event.target.value)}
-                  autoComplete="new-password"
-                  type="password"
-                  placeholder="비밀번호를 한 번 더 입력"
-                />
-              </label>
-            )}
-            <p className="auth-help">
-              비밀번호 찾기, 이메일 인증, 소셜 로그인은 MVP 범위에서 제외해요.
+          {!isSupabaseConfigured && (
+            <p className="auth-setup-notice">
+              `VITE_SUPABASE_URL`과 `VITE_SUPABASE_ANON_KEY`를 설정하면
+              실제 회원가입과 로그인을 사용할 수 있어요.
             </p>
-            {authMessage && (
-              <p className="auth-message" role="status">
-                {authMessage}
-              </p>
-            )}
-            <Button type="submit" className="auth-submit">
-              {authTitle}
-            </Button>
-          </form>
+          )}
+
+          {authSession ? (
+            <section className="auth-profile-card" aria-label="로그인 상태">
+              <p className="result-label">로그인됨</p>
+              <h2>{authSession.userId}</h2>
+              <p>러닝 기록을 사용자별로 분리하기 위한 세션이 준비됐어요.</p>
+              <Button type="button" className="auth-submit" onClick={handleSignOut}>
+                로그아웃
+              </Button>
+            </section>
+          ) : (
+            <>
+              <div className="auth-mode-switch" aria-label="인증 모드 선택">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={authMode === 'login' ? 'is-active' : ''}
+                  aria-pressed={authMode === 'login'}
+                  onClick={() => switchAuthMode('login')}
+                >
+                  로그인
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={authMode === 'signup' ? 'is-active' : ''}
+                  aria-pressed={authMode === 'signup'}
+                  onClick={() => switchAuthMode('signup')}
+                >
+                  회원가입
+                </Button>
+              </div>
+
+              <form className="auth-form" onSubmit={submitAuthForm}>
+                <h2>{authTitle}</h2>
+                <label>
+                  <span>ID</span>
+                  <input
+                    value={authUserId}
+                    onChange={(event) => setAuthUserId(event.target.value)}
+                    autoComplete="username"
+                    placeholder="runner-id"
+                  />
+                </label>
+                <label>
+                  <span>비밀번호</span>
+                  <input
+                    value={authPassword}
+                    onChange={(event) => setAuthPassword(event.target.value)}
+                    autoComplete={
+                      authMode === 'login' ? 'current-password' : 'new-password'
+                    }
+                    type="password"
+                    placeholder="8자 이상"
+                  />
+                </label>
+                {authMode === 'signup' && (
+                  <label>
+                    <span>비밀번호 확인</span>
+                    <input
+                      value={authPasswordConfirm}
+                      onChange={(event) =>
+                        setAuthPasswordConfirm(event.target.value)
+                      }
+                      autoComplete="new-password"
+                      type="password"
+                      placeholder="비밀번호를 한 번 더 입력"
+                    />
+                  </label>
+                )}
+                <p className="auth-help">
+                  비밀번호 찾기, 이메일 인증, 소셜 로그인은 MVP 범위에서 제외해요.
+                </p>
+                {authMessage && (
+                  <p className="auth-message" role="status">
+                    {authMessage}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  className="auth-submit"
+                  disabled={isAuthSubmitting}
+                >
+                  {isAuthSubmitting ? '처리 중' : authTitle}
+                </Button>
+              </form>
+            </>
+          )}
         </section>
       )}
 

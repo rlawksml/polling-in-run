@@ -8,6 +8,14 @@
 
 Supabase Auth로 인증을 처리하고 FastAPI는 전달받은 사용자 토큰과 권한을 검증한다.
 
+MVP에서는 사용자가 입력하는 ID를 내부 인증 이메일로 변환해 Supabase email/password Auth에 연결한다.
+
+```text
+runner-id → runner-id@polling-in-run.local
+```
+
+이 방식은 화면에서는 ID/PW 경험을 유지하면서 Supabase의 기본 Auth API를 사용할 수 있게 한다. 단, 실제 이메일 인증과 비밀번호 찾기는 MVP 범위에서 제외한다.
+
 ## Supabase Auth를 선택한 이유
 
 ### 장점
@@ -20,6 +28,7 @@ Supabase Auth로 인증을 처리하고 FastAPI는 전달받은 사용자 토큰
 
 - Supabase의 인증 방식과 토큰 수명주기를 이해해야 한다.
 - React와 FastAPI 양쪽에서 세션·권한 경계를 설계해야 한다.
+- Supabase Auth의 기본 비밀번호 인증은 email/password 또는 phone/password 중심이라 순수 ID/PW는 별도 매핑 규칙이 필요하다.
 
 ## 구현 시점
 
@@ -33,6 +42,10 @@ Supabase Auth로 인증을 처리하고 FastAPI는 전달받은 사용자 토큰
 - ID 4자 이상, 비밀번호 8자 이상, 회원가입 비밀번호 확인 일치 여부를 검증한다.
 - Supabase Auth 연결 전 단계이므로 비밀번호를 로컬에 저장하지 않는다.
 - 비밀번호 찾기, 이메일 인증, 소셜 로그인은 MVP 범위에서 제외한다는 안내를 화면에 표시한다.
+- `@supabase/supabase-js`를 추가하고 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 기반 클라이언트를 구성했다.
+- `signUp`, `signInWithPassword`, `getSession`, `onAuthStateChange`, `signOut` 흐름을 마이 페이지와 연결했다.
+- Supabase 환경변수가 없으면 인증 요청을 보내지 않고 설정 안내를 표시한다.
+- 사용자가 입력한 ID는 소문자 ID로 정규화한 뒤 `VITE_AUTH_EMAIL_DOMAIN`을 붙인 내부 인증 이메일로 변환한다.
 
 ## 완료 조건
 

@@ -315,10 +315,11 @@ describe('App', () => {
 
     expect(screen.getByText('ID/PW로 기록을 이어갈 준비')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
+    expect(screen.getByText(/VITE_SUPABASE_URL/)).toBeInTheDocument()
     expect(screen.getByText(/비밀번호 찾기, 이메일 인증, 소셜 로그인/)).toBeInTheDocument()
 
     fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
-    expect(screen.getByText('ID는 4자 이상 입력해주세요.')).toBeInTheDocument()
+    expect(screen.getByText(/ID는 영문 소문자/)).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('ID'), {
       target: { value: 'runner' },
@@ -332,6 +333,11 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('비밀번호'), {
       target: { value: '12345678' },
     })
+    fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
+    expect(
+      await screen.findByText(/Supabase 환경변수를 설정하면/),
+    ).toBeInTheDocument()
+
     fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[0])
     expect(screen.getByRole('heading', { name: '회원가입' })).toBeInTheDocument()
     expect(screen.getByLabelText('비밀번호 확인')).toBeInTheDocument()
