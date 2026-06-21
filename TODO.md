@@ -22,8 +22,8 @@
 
 ### 바로 다음 작업
 
-1. 모바일 브라우저에서 실제 위치와 주변 시설 요청 확인
-2. 모바일 브라우저에서 러닝 위치 추적과 기록 조회 흐름 검증
+1. [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md) 체크리스트로 실제 위치와 주변 시설 요청 확인
+2. 같은 체크리스트로 러닝 위치 추적, 저장, 기록 조회 흐름 검증
 3. 핵심 러닝 MVP 이후 Capacitor iOS Preview PR 생성
 
 ### 작업 방식
@@ -51,6 +51,8 @@
 
 - `http://localhost:5173`과 `http://127.0.0.1:5173`의 SDK 요청과 실제 지도 렌더링을 확인했다.
 - 브라우저 위치 권한이 꺼진 상태에서는 위치 안내와 재시도 UI가 표시된다.
+- 모바일 브라우저 실기기 확인 절차는 [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md)에 준비했다.
+- 스마트폰에서 내부 IP로 접속할 때는 해당 URL을 Kakao Developers Web 플랫폼 도메인에 임시 등록해야 한다.
 
 완료 조건:
 
@@ -62,6 +64,7 @@
 
 - [`홈 지도`](./docs/pages/home-map.md)
 - [`카카오맵과 현재 위치`](./docs/features/kakao-map-and-location.md)
+- [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md)
 
 ### M2. 주변 편의시설
 
@@ -109,6 +112,7 @@
 - [`러닝 결과`](./docs/pages/running-result.md)
 - [`러닝 추적`](./docs/features/run-tracking.md)
 - [`기록 저장`](./docs/features/record-storage.md)
+- [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md)
 
 ### M4. ID/PW 회원가입과 로그인
 

@@ -12,6 +12,7 @@
 | `pages/` | 사용자가 보는 화면별 목적과 상태 |
 | `features/` | 여러 화면을 가로지르는 기능과 기술 결정 |
 | `data-sources/` | 외부 데이터 출처, 라이선스, 수집·정규화 방식 |
+| `qa/` | 모바일 실기기, 배포 전 동작 확인 체크리스트 |
 | `blog/` | 개발 과정을 블로그·포트폴리오 글로 옮기기 위한 초안 |
 
 ## Pages
@@ -34,6 +35,10 @@
 
 - [`서울시 공원 음수대`](./data-sources/seoul-park-water-fountains.md)
 - [`서울시 공중화장실`](./data-sources/seoul-public-restrooms.md)
+
+## QA
+
+- [`모바일 실기기 검증`](./qa/mobile-real-device-check.md)
 
 ## Blog Drafts
 
