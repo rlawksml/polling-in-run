@@ -226,7 +226,7 @@ describe('App', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
 
-    expect(screen.getByText(/기록을 로컬에 저장했어요/)).toBeInTheDocument()
+    expect(screen.getByText(/기록을 이 기기에 임시 저장했어요/)).toBeInTheDocument()
     expect(window.localStorage.getItem('polling-in-run.records.v1')).toContain(
       '가볍게 달린 날',
     )
@@ -254,7 +254,7 @@ describe('App', () => {
       value: undefined,
     })
     window.localStorage.setItem(
-      'polling-in-run.records.v1',
+      'polling-in-run.records.v1.user.runner',
       JSON.stringify([
         {
           distanceM: 1200,
@@ -276,14 +276,15 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '기록' }))
 
     expect(screen.getByText('저장한 러닝 기록')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('1.20 km'))
     expect(screen.getByLabelText('러닝 기록 상세')).toHaveTextContent('삭제할 기록')
 
     fireEvent.click(screen.getByRole('button', { name: '기록 삭제' }))
 
     expect(screen.getByText('아직 저장한 기록이 없어요.')).toBeInTheDocument()
     await waitFor(() =>
-      expect(window.localStorage.getItem('polling-in-run.records.v1')).toBe('[]'),
+      expect(
+        window.localStorage.getItem('polling-in-run.records.v1.user.runner'),
+      ).toBe('[]'),
     )
   })
 

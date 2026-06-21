@@ -40,6 +40,14 @@ const locationMessages = {
 
 const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 
+function getRunRecordsStorageKey(authSession: AuthSession | null): string {
+  if (!authSession) {
+    return RUN_RECORDS_STORAGE_KEY
+  }
+
+  return `${RUN_RECORDS_STORAGE_KEY}.user.${encodeURIComponent(authSession.userId)}`
+}
+
 type AppTab = 'home' | 'records' | 'my'
 type AuthMode = 'login' | 'signup'
 
@@ -53,9 +61,9 @@ type RunRecord = {
   savedAt: string
 }
 
-function readRunRecords(): RunRecord[] {
+function readRunRecords(storageKey: string): RunRecord[] {
   try {
-    const rawRecords = window.localStorage.getItem(RUN_RECORDS_STORAGE_KEY)
+    const rawRecords = window.localStorage.getItem(storageKey)
 
     return rawRecords ? JSON.parse(rawRecords) : []
   } catch {
@@ -98,8 +106,9 @@ function App() {
   const [authMessage, setAuthMessage] = useState<string | null>(null)
   const [authSession, setAuthSession] = useState<AuthSession | null>(null)
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false)
+  const recordsStorageKey = getRunRecordsStorageKey(authSession)
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
-    readRunRecords(),
+    readRunRecords(RUN_RECORDS_STORAGE_KEY),
   )
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const facilities = useQuery({
@@ -135,16 +144,27 @@ function App() {
     runRecords.find((record) => record.id === selectedRecordId) ?? null
   const authTitle = authMode === 'login' ? '로그인' : '회원가입'
 
+  const loadRecordsForSession = (session: AuthSession | null) => {
+    const records = readRunRecords(getRunRecordsStorageKey(session))
+
+    setRunRecords(records)
+    setSelectedRecordId(records[0]?.id ?? null)
+  }
+
   useEffect(() => {
     let isMounted = true
 
     getCurrentAuthSession().then((session) => {
       if (isMounted) {
         setAuthSession(session)
+        loadRecordsForSession(session)
       }
     })
 
-    const unsubscribe = subscribeAuthSession(setAuthSession)
+    const unsubscribe = subscribeAuthSession((session) => {
+      setAuthSession(session)
+      loadRecordsForSession(session)
+    })
 
     return () => {
       isMounted = false
@@ -177,16 +197,20 @@ function App() {
         routePointCount: running.routePointCount,
         savedAt: new Date().toISOString(),
       }
-      const records = readRunRecords()
+      const records = readRunRecords(recordsStorageKey)
       const nextRecords = [record, ...records]
 
       window.localStorage.setItem(
-        RUN_RECORDS_STORAGE_KEY,
+        recordsStorageKey,
         JSON.stringify(nextRecords),
       )
       setRunRecords(nextRecords)
       setSelectedRecordId(record.id)
-      setRecordSaveMessage('기록을 로컬에 저장했어요. 하단 기록 탭에서 다시 볼 수 있어요.')
+      setRecordSaveMessage(
+        authSession
+          ? '기록을 내 계정 로컬 저장소에 저장했어요. 하단 기록 탭에서 다시 볼 수 있어요.'
+          : '기록을 이 기기에 임시 저장했어요. 로그인하면 계정별 기록을 따로 관리할 수 있어요.',
+      )
     } catch {
       setRecordSaveMessage('기록 저장에 실패했어요. 작성한 메모는 화면에 그대로 남아 있어요.')
     }
@@ -196,7 +220,7 @@ function App() {
     const nextRecords = runRecords.filter((record) => record.id !== recordId)
 
     window.localStorage.setItem(
-      RUN_RECORDS_STORAGE_KEY,
+      recordsStorageKey,
       JSON.stringify(nextRecords),
     )
     setRunRecords(nextRecords)
@@ -229,6 +253,7 @@ function App() {
 
       if (result.session) {
         setAuthSession(result.session)
+        loadRecordsForSession(result.session)
         setAuthPassword('')
         setAuthPasswordConfirm('')
       }
@@ -254,6 +279,7 @@ function App() {
     try {
       await signOut()
       setAuthSession(null)
+      loadRecordsForSession(null)
       setAuthMessage('로그아웃했어요.')
     } catch (error) {
       setAuthMessage(
