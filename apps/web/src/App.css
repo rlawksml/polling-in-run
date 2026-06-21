@@ -618,6 +618,127 @@ button {
   color: #93c5fd;
 }
 
+.my-panel {
+  position: absolute;
+  z-index: 3;
+  right: 16px;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  left: 16px;
+  display: grid;
+  max-height: 66vh;
+  gap: 16px;
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 22px 60px rgba(16, 24, 40, 0.2);
+  backdrop-filter: blur(16px);
+}
+
+.my-panel h1,
+.auth-form h2 {
+  margin: 0;
+  color: #101828;
+  letter-spacing: -0.04em;
+}
+
+.my-panel h1 {
+  font-size: 1.25rem;
+}
+
+.my-panel p {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 16px;
+  background: #f2f4f7;
+}
+
+.auth-mode-switch button {
+  min-height: 42px;
+  border-radius: 12px;
+  background: transparent;
+  color: #667085;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.auth-mode-switch button.is-active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #f8fafc;
+}
+
+.auth-form h2 {
+  font-size: 1.05rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 14px;
+  background: #ffffff;
+  color: #101828;
+  font: inherit;
+  font-weight: 700;
+}
+
+.auth-form input::placeholder {
+  color: #98a2b3;
+}
+
+.auth-form .auth-help {
+  margin: 0;
+  color: #667085;
+  font-size: 0.76rem;
+}
+
+.auth-message {
+  margin: 0 !important;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #175cd3 !important;
+  font-size: 0.78rem !important;
+  font-weight: 800;
+}
+
+.auth-submit {
+  min-height: 48px;
+  border-radius: 15px;
+  background: #101828;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
 .running-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
