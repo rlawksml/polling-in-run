@@ -46,6 +46,8 @@ runner-id → runner-id@polling-in-run.local
 - `signUp`, `signInWithPassword`, `getSession`, `onAuthStateChange`, `signOut` 흐름을 마이 페이지와 연결했다.
 - Supabase 환경변수가 없으면 인증 요청을 보내지 않고 설정 안내를 표시한다.
 - 사용자가 입력한 ID는 소문자 ID로 정규화한 뒤 `VITE_AUTH_EMAIL_DOMAIN`을 붙인 내부 인증 이메일로 변환한다.
+- Supabase 원문 인증 오류를 화면에 그대로 노출하지 않고, 중복 ID, 로그인 실패, 비밀번호 조건, 네트워크 오류를 한국어 안내 메시지로 변환한다.
+- 중복 ID는 현재 Supabase 응답 기반으로 안내하며, 입력 중 사전 중복 확인은 다음 단계로 남겨둔다.
 
 ## 완료 조건
 
