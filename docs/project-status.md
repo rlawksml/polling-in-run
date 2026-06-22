@@ -4,7 +4,7 @@
 
 ## 한 줄 요약
 
-Polling In Run은 현재 지도 기반 편의시설 탐색, 러닝 기록 MVP, ID/PW 인증 화면, Supabase Auth 클라이언트 연결, 인증 실패 메시지, 사용자별 로컬 기록 분리, ID 중복 확인, 회원 탈퇴 API 연결까지 완료한 상태다.
+Polling In Run은 현재 지도 기반 편의시설 탐색, 러닝 기록 MVP, M4 계정 라이프사이클, Capacitor iOS Preview 기본 설정까지 완료한 상태다.
 
 실제 모바일 실사용 검증과 Supabase 환경변수 입력 후 인증 동작 확인은 아직 남아 있다.
 
@@ -16,7 +16,7 @@ Polling In Run은 현재 지도 기반 편의시설 탐색, 러닝 기록 MVP, I
 | M2. 주변 편의시설 | 12 / 12 | 실제 음수대/화장실 데이터, 지도 영역 조회, 상세 카드, 길찾기, 클러스터링 완료 |
 | M3. 러닝 기록 | 5 / 5 | 러닝 시작, 일시정지, 종료, 거리/페이스, 결과 저장, 기록 조회 완료 |
 | M4. 회원가입과 로그인 | 8 / 8 | ID/PW 인증, 중복 확인, 기록 접근 로그인 게이트, 사용자별 로컬 기록 분리, 회원 탈퇴 API 연결 완료 |
-| M5. 모바일 앱 검증 | 0 / 7 | M4 이후 Capacitor iOS Preview와 모바일 실사용 검증 예정 |
+| M5. 모바일 앱 검증 | 5 / 7 | Capacitor 설정, iOS 플랫폼, API base URL 정리 완료. 실기기 검증 대기 |
 
 ## 완료된 핵심 기능
 
@@ -78,6 +78,7 @@ Polling In Run은 현재 지도 기반 편의시설 탐색, 러닝 기록 MVP, I
 | Map | Kakao Maps JavaScript API |
 | Backend | FastAPI, Python |
 | Auth | Supabase Auth |
+| Mobile Preview | Capacitor iOS |
 | Data | 서울 열린데이터광장, 공간데이터마켓 |
 | Local Storage | 러닝 기록 MVP 저장 |
 
@@ -89,6 +90,7 @@ Polling In Run은 현재 지도 기반 편의시설 탐색, 러닝 기록 MVP, I
 
 ```bash
 VITE_KAKAO_MAP_KEY=
+VITE_API_BASE_URL=
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_AUTH_EMAIL_DOMAIN=polling-in-run.local
@@ -122,22 +124,33 @@ git diff --check
 
 `npm --prefix apps/web audit` 결과는 `0 vulnerabilities`였다.
 
+M5 Capacitor iOS Preview 기준으로 아래 검증을 추가로 통과했다.
+
+```bash
+npm run build:web
+cd apps/web
+npx cap sync ios
+```
+
 ## 남은 작업
 
 ### 바로 다음
 
 1. Supabase Dashboard에서 web/api 환경변수를 로컬에 입력한다.
 2. 로컬에서 실제 회원가입, ID 중복 확인, 로그인, 회원 탈퇴를 확인한다.
-3. 모바일 실기기 검증 체크리스트를 수행한다.
+3. 모바일 브라우저와 Capacitor iOS 실기기 검증 체크리스트를 수행한다.
 
 ### M4 남은 범위
 
 - 구현 기준 완료. 실제 Supabase 프로젝트 환경변수 입력 후 수동 검증이 필요하다.
 
+### M5 남은 범위
+
+- 카카오맵 JavaScript SDK가 iOS WebView origin에서 동작하는지 확인한다.
+- iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시를 확인한다.
+
 ### M5 이후
 
-- 프로젝트 M4 마무리 후 모바일 브라우저 실기기 검증을 수행한다.
-- Capacitor iOS Preview를 별도 PR로 검토한다.
 - PWA 설치 경험과 Capacitor 앱 경험을 비교한다.
 
 ## 주의할 점
@@ -159,3 +172,4 @@ git diff --check
 - [`기록 저장`](./features/record-storage.md)
 - [`인증과 설정`](./features/auth-and-settings.md)
 - [`모바일 실기기 검증`](./qa/mobile-real-device-check.md)
+- [`Capacitor iOS Preview`](./qa/capacitor-ios-preview.md)

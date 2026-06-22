@@ -44,6 +44,7 @@
 ## QA
 
 - [`모바일 실기기 검증`](./qa/mobile-real-device-check.md)
+- [`Capacitor iOS Preview`](./qa/capacitor-ios-preview.md)
 
 ## Blog Drafts
 

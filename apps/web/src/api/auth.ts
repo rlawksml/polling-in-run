@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
+import { buildApiUrl } from './client'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const DEFAULT_AUTH_EMAIL_DOMAIN = 'polling-in-run.local'
@@ -108,7 +109,9 @@ async function readApiErrorMessage(response: Response): Promise<string> {
 
 export async function checkUserIdAvailability(userId: string): Promise<boolean> {
   const query = new URLSearchParams({ user_id: normalizeUserId(userId) })
-  const response = await fetch(`/api/auth/user-id-availability?${query}`)
+  const response = await fetch(
+    buildApiUrl(`/api/auth/user-id-availability?${query}`),
+  )
 
   if (!response.ok) {
     throw new Error(await readApiErrorMessage(response))
@@ -218,7 +221,7 @@ export async function signOut(): Promise<void> {
 export async function deleteCurrentUserAccount(
   session: AuthSession,
 ): Promise<void> {
-  const response = await fetch('/api/auth/account', {
+  const response = await fetch(buildApiUrl('/api/auth/account'), {
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
     },
