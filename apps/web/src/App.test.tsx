@@ -38,28 +38,39 @@ vi.mock('./components/KakaoMap', async () => {
 })
 
 const authMockState = vi.hoisted(() => ({
-  session: null as { email: string | null; userId: string } | null,
-}))
-
-vi.mock('./api/auth', () => ({
-  getCurrentAuthSession: vi.fn(() => Promise.resolve(authMockState.session)),
-  isSupabaseConfigured: false,
-  isValidUserId: vi.fn((userId: string) =>
-    /^[a-z0-9_-]{4,24}$/.test(userId.trim().toLowerCase()),
-  ),
+  checkUserIdAvailability: vi.fn(() => Promise.resolve(true)),
+  deleteCurrentUserAccount: vi.fn(() => Promise.resolve()),
+  session: null as {
+    accessToken: string
+    email: string | null
+    userId: string
+  } | null,
   signInWithUserId: vi.fn(() =>
     Promise.resolve({
       message: 'Supabase 환경변수를 설정하면 로그인을 진행할 수 있어요.',
       session: null,
     }),
   ),
-  signOut: vi.fn(() => Promise.resolve()),
   signUpWithUserId: vi.fn(() =>
     Promise.resolve({
       message: 'Supabase 환경변수를 설정하면 회원가입을 진행할 수 있어요.',
       session: null,
     }),
   ),
+}))
+
+vi.mock('./api/auth', () => ({
+  checkUserIdAvailability: authMockState.checkUserIdAvailability,
+  deleteCurrentUserAccount: authMockState.deleteCurrentUserAccount,
+  getCurrentAuthSession: vi.fn(() => Promise.resolve(authMockState.session)),
+  isSupabaseConfigured: false,
+  isValidUserId: vi.fn((userId: string) =>
+    /^[a-z0-9_-]{4,24}$/.test(userId.trim().toLowerCase()),
+  ),
+  normalizeUserId: vi.fn((userId: string) => userId.trim().toLowerCase()),
+  signInWithUserId: authMockState.signInWithUserId,
+  signOut: vi.fn(() => Promise.resolve()),
+  signUpWithUserId: authMockState.signUpWithUserId,
   subscribeAuthSession: vi.fn(() => () => undefined),
 }))
 
@@ -102,6 +113,12 @@ describe('App', () => {
   afterEach(() => {
     cleanup()
     authMockState.session = null
+    authMockState.checkUserIdAvailability.mockReset()
+    authMockState.checkUserIdAvailability.mockResolvedValue(true)
+    authMockState.deleteCurrentUserAccount.mockReset()
+    authMockState.deleteCurrentUserAccount.mockResolvedValue(undefined)
+    authMockState.signInWithUserId.mockClear()
+    authMockState.signUpWithUserId.mockClear()
     window.localStorage.clear()
     vi.restoreAllMocks()
   })
@@ -242,6 +259,7 @@ describe('App', () => {
 
   it('lets a signed-in user open and delete a saved running record', async () => {
     authMockState.session = {
+      accessToken: 'runner-access-token',
       email: 'runner@polling-in-run.local',
       userId: 'runner',
     }
@@ -415,5 +433,90 @@ describe('App', () => {
     fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[0])
     expect(screen.getByRole('heading', { name: '회원가입' })).toBeInTheDocument()
     expect(screen.getByLabelText('비밀번호 확인')).toBeInTheDocument()
+  })
+
+  it('requires a user ID availability check before signing up', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '마이' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[0])
+
+    fireEvent.change(screen.getByLabelText('ID'), {
+      target: { value: 'runner' },
+    })
+    fireEvent.change(screen.getByLabelText('비밀번호'), {
+      target: { value: '12345678' },
+    })
+    fireEvent.change(screen.getByLabelText('비밀번호 확인'), {
+      target: { value: '12345678' },
+    })
+
+    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[1])
+    expect(screen.getByText('회원가입 전에 ID 중복 확인을 완료해주세요.')).toBeInTheDocument()
+    expect(authMockState.signUpWithUserId).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'ID 중복 확인' }))
+
+    expect(await screen.findByText('사용할 수 있는 ID예요.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[1])
+
+    await waitFor(() =>
+      expect(authMockState.signUpWithUserId).toHaveBeenCalledWith(
+        'runner',
+        '12345678',
+      ),
+    )
+  })
+
+  it('lets a signed-in user confirm account deletion', async () => {
+    authMockState.session = {
+      accessToken: 'runner-access-token',
+      email: 'runner@polling-in-run.local',
+      userId: 'runner',
+    }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+    window.localStorage.setItem(
+      'polling-in-run.records.v1.user.runner',
+      JSON.stringify([{ id: 'run-1' }]),
+    )
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '마이' }))
+    await screen.findByLabelText('로그인 상태')
+
+    fireEvent.click(screen.getByRole('button', { name: '회원 탈퇴' }))
+    expect(screen.getByText('회원 탈퇴를 한 번 더 누르면 계정을 삭제해요.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '정말 탈퇴하기' }))
+
+    await waitFor(() =>
+      expect(authMockState.deleteCurrentUserAccount).toHaveBeenCalledWith(
+        authMockState.session,
+      ),
+    )
+    expect(
+      window.localStorage.getItem('polling-in-run.records.v1.user.runner'),
+    ).toBeNull()
+    expect(
+      await screen.findByText(/회원 탈퇴가 완료됐어요/),
+    ).toBeInTheDocument()
   })
 })

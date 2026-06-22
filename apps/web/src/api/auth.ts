@@ -7,6 +7,7 @@ const DEFAULT_AUTH_ERROR_MESSAGE =
   '인증 요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.'
 
 export type AuthSession = {
+  accessToken: string
   email: string | null
   userId: string
 }
@@ -90,7 +91,32 @@ export function sessionToAuthSession(session: Session | null): AuthSession | nul
       ? session.user.user_metadata.user_id
       : email?.split('@')[0]
 
-  return userId ? { email, userId } : null
+  return userId ? { accessToken: session.access_token, email, userId } : null
+}
+
+async function readApiErrorMessage(response: Response): Promise<string> {
+  try {
+    const payload = await response.json()
+
+    return typeof payload.detail === 'string'
+      ? payload.detail
+      : '인증 API 요청을 처리하지 못했어요.'
+  } catch {
+    return '인증 API 요청을 처리하지 못했어요.'
+  }
+}
+
+export async function checkUserIdAvailability(userId: string): Promise<boolean> {
+  const query = new URLSearchParams({ user_id: normalizeUserId(userId) })
+  const response = await fetch(`/api/auth/user-id-availability?${query}`)
+
+  if (!response.ok) {
+    throw new Error(await readApiErrorMessage(response))
+  }
+
+  const payload = (await response.json()) as { available: boolean }
+
+  return payload.available
 }
 
 export async function getCurrentAuthSession(): Promise<AuthSession | null> {
@@ -187,6 +213,23 @@ export async function signOut(): Promise<void> {
   if (error) {
     throw new Error(formatAuthErrorMessage(error.message))
   }
+}
+
+export async function deleteCurrentUserAccount(
+  session: AuthSession,
+): Promise<void> {
+  const response = await fetch('/api/auth/account', {
+    headers: {
+      Authorization: `Bearer ${session.accessToken}`,
+    },
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readApiErrorMessage(response))
+  }
+
+  await signOut()
 }
 
 export { isSupabaseConfigured }
