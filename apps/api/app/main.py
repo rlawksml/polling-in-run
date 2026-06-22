@@ -1,4 +1,5 @@
 import os
+import re
 from functools import lru_cache
 from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
@@ -7,7 +8,7 @@ from xml.etree import ElementTree
 from zipfile import ZipFile
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,7 @@ SEOUL_OPEN_DATA_BASE_URL = "http://openapi.seoul.go.kr:8088"
 SEOUL_WATER_FOUNTAIN_SERVICE = "TbViewGisArisu"
 SEOUL_OPEN_DATA_PAGE_SIZE = 1000
 SEOUL_OPEN_DATA_TIMEOUT_SECONDS = 3
+SUPABASE_AUTH_TIMEOUT_SECONDS = 5
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SEOUL_RESTROOM_XLSX_PATH = (
     PROJECT_ROOT / "data" / "raw" / "restrooms" / "seoul-public-restrooms.xlsx"
@@ -56,6 +58,15 @@ class Facility(BaseModel):
 
 class FacilityResponse(Facility):
     distance_m: Optional[int] = None
+
+
+class UserIdAvailabilityResponse(BaseModel):
+    user_id: str
+    available: bool
+
+
+class AccountDeletionResponse(BaseModel):
+    message: str
 
 
 SAMPLE_FACILITIES = [
@@ -118,6 +129,40 @@ def get_api_env_value(key: str) -> Optional[str]:
         return line.split("=", 1)[1].strip().strip('"').strip("'")
 
     return None
+
+
+def normalize_user_id(user_id: str) -> str:
+    return user_id.strip().lower()
+
+
+def is_valid_user_id(user_id: str) -> bool:
+    return re.fullmatch(r"[a-z0-9_-]{4,24}", normalize_user_id(user_id)) is not None
+
+
+def user_id_to_auth_email(user_id: str) -> str:
+    domain = get_api_env_value("SUPABASE_AUTH_EMAIL_DOMAIN") or "polling-in-run.local"
+
+    return f"{normalize_user_id(user_id)}@{domain}"
+
+
+def get_supabase_admin_config() -> tuple[str, str]:
+    supabase_url = get_api_env_value("SUPABASE_URL")
+    service_role_key = get_api_env_value("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not service_role_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Supabase admin environment variables are not configured",
+        )
+
+    return supabase_url.rstrip("/"), service_role_key
+
+
+def get_supabase_admin_headers(service_role_key: str) -> dict[str, str]:
+    return {
+        "apikey": service_role_key,
+        "Authorization": f"Bearer {service_role_key}",
+    }
 
 
 def build_water_fountain_url(api_key: str, start: int, end: int) -> str:
@@ -557,6 +602,121 @@ def health_check() -> HealthResponse:
         service="polling-in-run-api",
         version=app.version,
     )
+
+
+@app.get(
+    "/api/auth/user-id-availability",
+    response_model=UserIdAvailabilityResponse,
+    tags=["auth"],
+)
+def check_user_id_availability(
+    user_id: str = Query(min_length=4, max_length=24),
+) -> UserIdAvailabilityResponse:
+    normalized_user_id = normalize_user_id(user_id)
+
+    if not is_valid_user_id(normalized_user_id):
+        raise HTTPException(
+            status_code=422,
+            detail="user_id must use lowercase letters, numbers, -, or _",
+        )
+
+    supabase_url, service_role_key = get_supabase_admin_config()
+    email = user_id_to_auth_email(normalized_user_id)
+
+    try:
+        response = httpx.get(
+            f"{supabase_url}/auth/v1/admin/users",
+            headers=get_supabase_admin_headers(service_role_key),
+            params={"email": email},
+            timeout=SUPABASE_AUTH_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Supabase user availability request failed: {error}",
+        ) from error
+
+    payload = response.json()
+    users = payload.get("users") if isinstance(payload, dict) else None
+    matching_users = [
+        user
+        for user in users or []
+        if isinstance(user, dict) and user.get("email") == email
+    ]
+
+    return UserIdAvailabilityResponse(
+        user_id=normalized_user_id,
+        available=len(matching_users) == 0,
+    )
+
+
+@app.delete(
+    "/api/auth/account",
+    response_model=AccountDeletionResponse,
+    tags=["auth"],
+)
+def delete_account(
+    authorization: Optional[str] = Header(default=None),
+) -> AccountDeletionResponse:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization bearer token is required",
+        )
+
+    access_token = authorization.removeprefix("Bearer ").strip()
+    supabase_url, service_role_key = get_supabase_admin_config()
+    admin_headers = get_supabase_admin_headers(service_role_key)
+
+    try:
+        user_response = httpx.get(
+            f"{supabase_url}/auth/v1/user",
+            headers={
+                "apikey": service_role_key,
+                "Authorization": f"Bearer {access_token}",
+            },
+            timeout=SUPABASE_AUTH_TIMEOUT_SECONDS,
+        )
+        user_response.raise_for_status()
+    except httpx.HTTPStatusError as error:
+        if error.response.status_code in {401, 403}:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired auth token",
+            ) from error
+        raise HTTPException(
+            status_code=502,
+            detail=f"Supabase user verification failed: {error}",
+        ) from error
+    except httpx.HTTPError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Supabase user verification failed: {error}",
+        ) from error
+
+    user_id = user_response.json().get("id")
+
+    if not user_id:
+        raise HTTPException(
+            status_code=502,
+            detail="Supabase user response did not include an id",
+        )
+
+    try:
+        delete_response = httpx.delete(
+            f"{supabase_url}/auth/v1/admin/users/{user_id}",
+            headers=admin_headers,
+            timeout=SUPABASE_AUTH_TIMEOUT_SECONDS,
+        )
+        delete_response.raise_for_status()
+    except httpx.HTTPError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Supabase account deletion failed: {error}",
+        ) from error
+
+    return AccountDeletionResponse(message="Account deleted")
 
 
 def calculate_distance_m(

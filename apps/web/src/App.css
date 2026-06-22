@@ -729,6 +729,16 @@ button {
   font-size: 0.76rem;
 }
 
+.auth-secondary-action {
+  min-height: 44px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #175cd3;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .auth-setup-notice {
   margin: 0 !important;
   padding: 12px 14px;
@@ -776,6 +786,36 @@ button {
 .auth-profile-card .auth-submit {
   background: #ffffff;
   color: #101828;
+}
+
+.account-danger-zone {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(251, 113, 133, 0.32);
+  border-radius: 16px;
+  background: rgba(127, 29, 29, 0.22);
+}
+
+.account-danger-zone strong {
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.account-danger-zone span {
+  color: #fecdd3;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.account-delete-button {
+  min-height: 44px;
+  border: 1px solid rgba(254, 205, 211, 0.35);
+  border-radius: 14px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .auth-submit {

@@ -47,8 +47,17 @@ runner-id → runner-id@polling-in-run.local
 - Supabase 환경변수가 없으면 인증 요청을 보내지 않고 설정 안내를 표시한다.
 - 사용자가 입력한 ID는 소문자 ID로 정규화한 뒤 `VITE_AUTH_EMAIL_DOMAIN`을 붙인 내부 인증 이메일로 변환한다.
 - Supabase 원문 인증 오류를 화면에 그대로 노출하지 않고, 중복 ID, 로그인 실패, 비밀번호 조건, 네트워크 오류를 한국어 안내 메시지로 변환한다.
-- 중복 ID는 현재 Supabase 응답 기반으로 안내하며, 입력 중 사전 중복 확인은 다음 단계로 남겨둔다.
+- 중복 ID는 Supabase 응답 기반 안내를 먼저 적용했다.
 - 로그인한 사용자 기록은 세션의 `userId`를 포함한 로컬 저장소 key로 분리한다. Supabase DB 저장은 이후 단계에서 연결한다.
+
+### 2026-06-22
+
+- FastAPI에 `GET /api/auth/user-id-availability`를 추가해 회원가입 전 ID 중복 확인을 수행한다.
+- FastAPI에 `DELETE /api/auth/account`를 추가해 현재 로그인한 사용자의 Supabase Auth 계정 삭제를 요청한다.
+- 회원 탈퇴는 2단계 확인 버튼으로 처리하고, 성공 시 이 기기의 사용자별 로컬 러닝 기록도 삭제한다.
+- Supabase Auth Admin API가 필요한 작업은 서버에서만 수행한다.
+- `SUPABASE_SERVICE_ROLE_KEY`는 `apps/api/.env`에만 저장하며, 브라우저에 노출되는 `apps/web/.env.local`에는 넣지 않는다.
+- 클라이언트는 access token을 FastAPI에 전달하고, FastAPI가 토큰으로 현재 사용자를 확인한 뒤 service role key로 삭제를 수행한다.
 
 ## 완료 조건
 

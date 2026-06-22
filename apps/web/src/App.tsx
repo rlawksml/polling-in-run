@@ -2,9 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import {
+  checkUserIdAvailability,
+  deleteCurrentUserAccount,
   getCurrentAuthSession,
   isSupabaseConfigured,
   isValidUserId,
+  normalizeUserId,
   signInWithUserId,
   signOut,
   signUpWithUserId,
@@ -105,6 +108,10 @@ function App() {
   const [authPasswordConfirm, setAuthPasswordConfirm] = useState('')
   const [authMessage, setAuthMessage] = useState<string | null>(null)
   const [authSession, setAuthSession] = useState<AuthSession | null>(null)
+  const [availableUserId, setAvailableUserId] = useState<string | null>(null)
+  const [isCheckingUserId, setIsCheckingUserId] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false)
   const recordsStorageKey = getRunRecordsStorageKey(authSession)
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
@@ -186,6 +193,43 @@ function App() {
     running.reset()
   }
 
+  const changeAuthUserId = (userId: string) => {
+    setAuthUserId(userId)
+    setAvailableUserId(null)
+  }
+
+  const checkCurrentUserIdAvailability = async () => {
+    if (!isValidUserId(authUserId)) {
+      setAuthMessage('ID는 영문 소문자, 숫자, -, _ 조합으로 4~24자 입력해주세요.')
+      setAvailableUserId(null)
+      return
+    }
+
+    try {
+      setIsCheckingUserId(true)
+      const normalizedUserId = normalizeUserId(authUserId)
+      const isAvailable = await checkUserIdAvailability(normalizedUserId)
+
+      if (isAvailable) {
+        setAvailableUserId(normalizedUserId)
+        setAuthMessage('사용할 수 있는 ID예요.')
+        return
+      }
+
+      setAvailableUserId(null)
+      setAuthMessage('이미 사용 중인 ID예요. 다른 ID를 입력해주세요.')
+    } catch (error) {
+      setAvailableUserId(null)
+      setAuthMessage(
+        error instanceof Error
+          ? error.message
+          : 'ID 중복 확인을 처리하지 못했어요.',
+      )
+    } finally {
+      setIsCheckingUserId(false)
+    }
+  }
+
   const saveRunningRecord = () => {
     try {
       const record = {
@@ -242,6 +286,14 @@ function App() {
       return
     }
 
+    if (
+      authMode === 'signup'
+      && availableUserId !== normalizeUserId(authUserId)
+    ) {
+      setAuthMessage('회원가입 전에 ID 중복 확인을 완료해주세요.')
+      return
+    }
+
     try {
       setIsAuthSubmitting(true)
       const result =
@@ -272,6 +324,7 @@ function App() {
     setAuthMode(mode)
     setAuthPassword('')
     setAuthPasswordConfirm('')
+    setAvailableUserId(null)
     setAuthMessage(null)
   }
 
@@ -280,6 +333,7 @@ function App() {
       await signOut()
       setAuthSession(null)
       loadRecordsForSession(null)
+      setIsDeleteConfirming(false)
       setAuthMessage('로그아웃했어요.')
     } catch (error) {
       setAuthMessage(
@@ -287,6 +341,38 @@ function App() {
           ? error.message
           : '로그아웃을 처리하지 못했어요.',
       )
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!authSession) {
+      return
+    }
+
+    if (!isDeleteConfirming) {
+      setIsDeleteConfirming(true)
+      setAuthMessage('회원 탈퇴를 한 번 더 누르면 계정을 삭제해요.')
+      return
+    }
+
+    try {
+      setIsDeletingAccount(true)
+      const currentRecordsStorageKey = getRunRecordsStorageKey(authSession)
+
+      await deleteCurrentUserAccount(authSession)
+      window.localStorage.removeItem(currentRecordsStorageKey)
+      setAuthSession(null)
+      loadRecordsForSession(null)
+      setIsDeleteConfirming(false)
+      setAuthMessage('회원 탈퇴가 완료됐어요. 이 기기의 계정별 러닝 기록도 삭제했어요.')
+    } catch (error) {
+      setAuthMessage(
+        error instanceof Error
+          ? error.message
+          : '회원 탈퇴를 처리하지 못했어요.',
+      )
+    } finally {
+      setIsDeletingAccount(false)
     }
   }
 
@@ -470,9 +556,34 @@ function App() {
               <p className="result-label">로그인됨</p>
               <h2>{authSession.userId}</h2>
               <p>러닝 기록을 사용자별로 분리하기 위한 세션이 준비됐어요.</p>
+              {authMessage && (
+                <p className="auth-message" role="status">
+                  {authMessage}
+                </p>
+              )}
               <Button type="button" className="auth-submit" onClick={handleSignOut}>
                 로그아웃
               </Button>
+              <div className="account-danger-zone">
+                <strong>회원 탈퇴</strong>
+                <span>
+                  Supabase 계정과 이 기기에 저장된 계정별 러닝 기록을 삭제해요.
+                  이 작업은 되돌릴 수 없어요.
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="account-delete-button"
+                  disabled={isDeletingAccount}
+                  onClick={handleDeleteAccount}
+                >
+                  {isDeletingAccount
+                    ? '탈퇴 처리 중'
+                    : isDeleteConfirming
+                      ? '정말 탈퇴하기'
+                      : '회원 탈퇴'}
+                </Button>
+              </div>
             </section>
           ) : (
             <>
@@ -503,11 +614,22 @@ function App() {
                   <span>ID</span>
                   <input
                     value={authUserId}
-                    onChange={(event) => setAuthUserId(event.target.value)}
+                    onChange={(event) => changeAuthUserId(event.target.value)}
                     autoComplete="username"
                     placeholder="runner-id"
                   />
                 </label>
+                {authMode === 'signup' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="auth-secondary-action"
+                    disabled={isCheckingUserId}
+                    onClick={checkCurrentUserIdAvailability}
+                  >
+                    {isCheckingUserId ? '확인 중' : 'ID 중복 확인'}
+                  </Button>
+                )}
                 <label>
                   <span>비밀번호</span>
                   <input
