@@ -178,7 +178,7 @@ Supabase와 FastAPI 중 하나만 선택하지 않고 역할을 분리합니다.
 
 Kakao Maps 기반 홈 화면에서 현재 위치, 지도 컨트롤, 실제 서울 공원 음수대 마커, 실제 서울 공중화장실 마커를 표시합니다. FastAPI는 서울 열린데이터광장 음수대 데이터와 공간데이터마켓 화장실 DBF 원본을 공통 `Facility` 모델로 정규화하고, 현재 지도 영역과 현재 위치 반경 안의 시설을 거리순으로 반환합니다. 시설이 밀집된 영역에서는 카카오맵 MarkerClusterer로 가까운 마커를 묶어 표시합니다.
 
-마커를 선택하면 시설명, 주소, 거리 정보를 확인할 수 있으며 카카오맵 길찾기로 이동할 수 있습니다. 러닝 프로세스는 `idle → running → paused → finished` 상태 모델, 화면이 켜진 상태의 위치 포인트 수집, GPS 기반 거리·페이스 계산, 러닝 결과 확인 화면, 로컬 기록·메모 저장과 기록 목록/상세·삭제까지 구현했습니다. 마이 페이지에는 ID/PW 회원가입·로그인 화면, Supabase Auth 클라이언트 연결, 세션 유지, 로그아웃, ID 중복 확인, 회원 탈퇴를 추가했고, 비로그인 사용자가 기록 탭을 누르면 로그인 화면으로 이동합니다. 로그인한 사용자의 기록은 로컬 저장소 key를 분리해 같은 브라우저 안에서도 서로 섞이지 않게 했습니다. 다음 큰 작업은 Supabase 환경변수 입력 후 실제 인증 확인과 [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md)입니다.
+마커를 선택하면 시설명, 주소, 거리 정보를 확인할 수 있으며 카카오맵 길찾기로 이동할 수 있습니다. 러닝 프로세스는 `idle → running → paused → finished` 상태 모델, 화면이 켜진 상태의 위치 포인트 수집, GPS 기반 거리·페이스 계산, 러닝 결과 확인 화면, 로컬 기록·메모 저장과 기록 목록/상세·삭제까지 구현했습니다. 마이 페이지에는 ID/PW 회원가입·로그인 화면, Supabase Auth 클라이언트 연결, 세션 유지, 로그아웃, ID 중복 확인, 회원 탈퇴를 추가했고, 비로그인 사용자가 기록 탭을 누르면 로그인 화면으로 이동합니다. 로그인한 사용자의 기록은 로컬 저장소 key를 분리해 같은 브라우저 안에서도 서로 섞이지 않게 했습니다. Capacitor iOS 프로젝트와 API base URL 설정을 추가했으며, 다음 큰 작업은 실제 iPhone 검증입니다.
 
 ## Local Development
 
@@ -197,6 +197,12 @@ npm run dev:web
 - API health: http://127.0.0.1:8000/api/health
 - API docs: http://127.0.0.1:8000/docs
 
+Capacitor 또는 배포된 프론트엔드에서 FastAPI origin을 직접 지정하려면 `apps/web/.env.local`에 아래 값을 추가합니다. 로컬 Vite dev proxy를 사용할 때는 비워둘 수 있습니다.
+
+```bash
+VITE_API_BASE_URL=
+```
+
 Supabase Auth를 사용하려면 `apps/web/.env.local`에 아래 값을 추가합니다.
 
 ```bash
@@ -214,6 +220,17 @@ SUPABASE_AUTH_EMAIL_DOMAIN=polling-in-run.local
 ```
 
 MVP의 ID/PW 방식은 사용자가 입력한 ID를 내부 인증 이메일로 변환해 Supabase email/password Auth에 연결합니다. 실제 이메일 인증을 쓰는 방식으로 바꿀 수 있지만, 현재 범위에서는 비밀번호 찾기와 이메일 인증을 제외합니다.
+
+Capacitor iOS Preview는 `apps/web` 기준으로 실행합니다.
+
+```bash
+npm run build:web
+cd apps/web
+npx cap sync ios
+npx cap open ios
+```
+
+Capacitor 앱에서는 Vite dev proxy가 없으므로 `VITE_API_BASE_URL`에 FastAPI origin을 지정합니다.
 
 Kakao Maps JavaScript SDK는 등록된 Web 플랫폼 도메인에서만 동작합니다. 로컬 개발은 `http://localhost:5173`을 기준으로 확인하고, 모바일 실기기에서 내부 IP로 접속하려면 해당 IP 주소를 Kakao Developers에 추가 등록해야 합니다.
 

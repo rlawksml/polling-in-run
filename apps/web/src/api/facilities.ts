@@ -1,3 +1,5 @@
+import { buildApiUrl } from './client'
+
 export type FacilityType = 'water' | 'restroom'
 
 export type Facility = {
@@ -49,7 +51,7 @@ export async function getFacilities(
 
   const queryString = searchParams.toString()
   const response = await fetch(
-    `/api/facilities${queryString ? `?${queryString}` : ''}`,
+    buildApiUrl(`/api/facilities${queryString ? `?${queryString}` : ''}`),
   )
 
   if (!response.ok) {

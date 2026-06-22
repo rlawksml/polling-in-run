@@ -13,7 +13,7 @@
 | M2. 주변 편의시설 | 12 / 12 | 실제 시설 데이터, 지도 영역 기반 조회, 상세 카드, 길찾기, 클러스터링 완료 |
 | M3. 러닝 기록 | 5 / 5 | 러닝 상태, 위치 추적, 거리·페이스, 결과 확인, 로컬 기록 저장·조회 완료 |
 | M4. 회원가입과 로그인 | 8 / 8 | ID/PW 인증, 중복 확인, 사용자별 로컬 기록 분리, 회원 탈퇴 API 연결 완료 |
-| M5. 모바일 앱 검증 | 0 / 7 | 핵심 러닝 MVP 이후 Capacitor iOS Preview 도입 예정 |
+| M5. 모바일 앱 검증 | 5 / 7 | Capacitor 설정, iOS 플랫폼, API base URL 정리 완료. 실기기 검증 대기 |
 | 기반 작업 | 6 / 6 | React, FastAPI, 테스트, shadcn/ui + Tailwind 기반 완료 |
 
 현재 앱은 카카오맵에서 실제 서울 공원 음수대와 실제 서울 공중화장실을 표시하며, 위치 권한을
@@ -23,8 +23,8 @@
 ### 바로 다음 작업
 
 1. Supabase 프로젝트에서 web/api 환경변수를 로컬 입력 후 실제 인증 플로우 확인
-2. 프로젝트 M4 이후 [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md) 체크리스트 수행
-3. M5 Capacitor iOS Preview 도입 여부 검토
+2. [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md) 체크리스트 수행
+3. [`Capacitor iOS Preview`](./docs/qa/capacitor-ios-preview.md) 실기기 검증 수행
 
 ### 작업 방식
 
@@ -182,15 +182,15 @@ MVP 제외:
 
 - 마커 클러스터링과 러닝 시작·일시정지·종료 흐름이 안정화된 뒤 진행한다. 클러스터링은 완료했다.
 - 거리와 시간 계산, 러닝 결과 저장 초안이 있어야 아이폰 실기기 테스트의 의미가 커진다.
-- 지금은 즉시 구현하지 않고 API base URL과 Kakao SDK origin 리스크만 기록해둔다.
+- Capacitor 설정과 iOS 플랫폼 추가를 시작했다. 실기기 검증은 아직 남아 있다.
 
 범위:
 
-- [ ] 핵심 러닝 MVP 이후 `codex/capacitor-ios-preview` 브랜치 생성
-- [ ] Capacitor 기본 패키지 설치와 설정 파일 추가
-- [ ] iOS 플랫폼 추가
-- [ ] `apps/web/dist` 빌드 결과를 Capacitor `webDir`로 연결
-- [ ] API 호출을 Capacitor 환경에서도 동작하도록 `VITE_API_BASE_URL` 기반으로 정리
+- [x] 핵심 러닝 MVP 이후 `codex/capacitor-ios-preview` 브랜치 생성
+- [x] Capacitor 기본 패키지 설치와 설정 파일 추가
+- [x] iOS 플랫폼 추가
+- [x] `apps/web/dist` 빌드 결과를 Capacitor `webDir`로 연결
+- [x] API 호출을 Capacitor 환경에서도 동작하도록 `VITE_API_BASE_URL` 기반으로 정리
 - [ ] 카카오맵 JavaScript SDK가 iOS WebView origin에서 동작하는지 확인
 - [ ] iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시 확인
 
