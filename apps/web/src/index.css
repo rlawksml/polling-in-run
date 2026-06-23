@@ -11,6 +11,12 @@
   text-rendering: optimizeLegibility;
 }
 
+:root.is-native-map,
+body.is-native-map,
+body.is-native-map #root {
+  background: transparent;
+}
+
 * {
   box-sizing: border-box;
 }

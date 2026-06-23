@@ -449,6 +449,16 @@ function App() {
     ? getRoutePathData(selectedRecord.routePoints)
     : null
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-native-map', isNativePlatform)
+    document.body.classList.toggle('is-native-map', isNativePlatform)
+
+    return () => {
+      document.documentElement.classList.remove('is-native-map')
+      document.body.classList.remove('is-native-map')
+    }
+  }, [isNativePlatform])
+
   const toggleFacilityType = (type: FacilityType) => {
     setVisibleTypes((current) =>
       current.includes(type)
