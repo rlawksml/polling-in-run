@@ -368,6 +368,11 @@ function App() {
     [visibleFacilities],
   )
   const isRunningSessionActive = running.status !== 'idle'
+  const isHomeInitialLoading =
+    !isRunningSessionActive &&
+    activeTab === 'home' &&
+    !hasLocationError &&
+    (status === 'idle' || status === 'loading' || facilities.isPending)
   const recordMonthOptions = getRecordMonthOptions(runRecords)
   const visibleRunRecords = getVisibleRecords(
     runRecords,
@@ -591,6 +596,23 @@ function App() {
             MY
           </Button>
         </header>
+      )}
+
+      {isHomeInitialLoading && (
+        <section
+          className="app-loading-card"
+          aria-label="앱 초기 로딩 상태"
+          aria-live="polite"
+        >
+          <div>
+            <p className="loading-label">LOADING</p>
+            <strong>지도를 준비하고 있어요.</strong>
+            <span>현재 위치와 주변 시설 정보를 불러오는 중이에요.</span>
+          </div>
+          <div className="loading-bar" aria-hidden="true">
+            <span />
+          </div>
+        </section>
       )}
 
       {!isRunningSessionActive && activeTab === 'home' && (
