@@ -698,7 +698,6 @@ function App() {
       {!isRunningSessionActive && activeTab === 'home' && (
         <header className="home-brand-card">
           <p className="eyebrow">POLLING IN RUN</p>
-          <h1>달리기 좋은 순간이에요.</h1>
         </header>
       )}
 
