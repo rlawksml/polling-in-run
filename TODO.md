@@ -13,7 +13,7 @@
 | M2. 주변 편의시설 | 12 / 12 | 실제 시설 데이터, 지도 영역 기반 조회, 상세 카드, 길찾기, 클러스터링 완료 |
 | M3. 러닝 기록 | 5 / 5 | 러닝 상태, 위치 추적, 거리·페이스, 결과 확인, 로컬 기록 저장·조회 완료 |
 | M4. 마이 페이지와 로컬 사용자 정보 | 6 / 6 | 로그인 기능은 추후 확장으로 축소, 로컬 프로필·러닝 대시보드·설정 안내 구현 완료 |
-| M5. Local-first iPhone 프로토타입 | 7.7 / 8 | Capacitor 설정 완료, 시설 데이터 로컬 JSON 생성, 홈 화면 Apple MapKit 대체와 터치 전달 구현 |
+| M5. Local-first iPhone 프로토타입 | 7.8 / 8 | Capacitor 설정 완료, 홈 화면 Apple MapKit 대체, 터치 전달, 현위치 이동 버튼 구현 |
 | 기반 작업 | 6 / 6 | React, FastAPI, 테스트, shadcn/ui + Tailwind 기반 완료 |
 
 현재 앱은 카카오맵에서 실제 서울 공원 음수대와 실제 서울 공중화장실을 표시하며, 위치 권한을
@@ -22,7 +22,7 @@
 
 ### 바로 다음 작업
 
-1. iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도 드래그·확대/축소와 시설 마커 터치를 확인한다.
+1. iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도 드래그·확대/축소, 현위치 이동, 시설 마커 터치를 확인한다.
 2. 기록 페이지 확장 기능의 실제 사용감을 확인하고 필터·정렬·경로 미리보기 표현을 다듬는다.
 3. 시설 JSON 크기와 로딩 성능을 iPhone에서 확인하고 필요하면 압축·분할 전략을 검토한다.
 
@@ -193,6 +193,7 @@ MVP 제외:
 - [x] Apple MapKit native 구현 경로 문서화
 - [x] NativeMap Capacitor plugin 초안 추가
 - [x] WebView overlay의 버튼·카드 영역만 터치받고 나머지는 embedded MapKit으로 넘기는 touch pass-through 구현
+- [x] iPhone 홈 화면의 MY 상단 버튼 제거, 브랜드 카드 재배치, native 현위치 이동 버튼 추가
 - [ ] iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시 확인
 - [x] 시설 데이터 local-first 번들링 전략 1차 구현
 

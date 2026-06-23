@@ -21,6 +21,12 @@ type NativeMapPlugin = {
     }
     facilities: NativeMapFacility[]
   }): Promise<void>
+  recenter(options: {
+    center: {
+      latitude: number
+      longitude: number
+    }
+  }): Promise<void>
   setTouchAreas(options: {
     areas: NativeMapTouchArea[]
   }): Promise<void>

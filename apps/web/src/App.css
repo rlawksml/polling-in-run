@@ -31,9 +31,10 @@ button {
 .app-shell.is-native-map input,
 .app-shell.is-native-map select,
 .app-shell.is-native-map textarea,
-.app-shell.is-native-map .top-bar,
+.app-shell.is-native-map .home-brand-card,
 .app-shell.is-native-map .facility-filter,
 .app-shell.is-native-map .facility-status,
+.app-shell.is-native-map .native-map-controls,
 .app-shell.is-native-map .native-map-status,
 .app-shell.is-native-map .app-loading-card,
 .app-shell.is-native-map .location-card,
@@ -211,22 +212,20 @@ button {
   }
 }
 
-.top-bar {
+.home-brand-card {
   position: absolute;
   z-index: 2;
-  top: 0;
-  right: 0;
-  left: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: max(20px, env(safe-area-inset-top)) 20px 28px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.98) 0%,
-    rgba(248, 250, 252, 0.78) 70%,
-    transparent 100%
-  );
+  top: calc(max(18px, env(safe-area-inset-top)) + 52px);
+  left: 20px;
+  display: grid;
+  gap: 2px;
+  max-width: calc(100% - 40px);
+  padding: 10px 14px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.12);
+  backdrop-filter: blur(14px);
 }
 
 .eyebrow,
@@ -238,29 +237,17 @@ button {
   letter-spacing: 0.12em;
 }
 
-.top-bar h1 {
+.home-brand-card h1 {
   margin: 0;
   color: #101828;
-  font-size: 1.3rem;
+  font-size: 1rem;
   letter-spacing: -0.045em;
-}
-
-.profile-button {
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgba(16, 24, 40, 0.12);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.94);
-  color: #101828;
-  font-size: 0.72rem;
-  font-weight: 900;
-  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.12);
 }
 
 .facility-filter {
   position: absolute;
   z-index: 2;
-  top: 112px;
+  top: calc(max(18px, env(safe-area-inset-top)) + 138px);
   left: 20px;
   display: flex;
   gap: 8px;
@@ -311,7 +298,7 @@ button {
 .facility-status {
   position: absolute;
   z-index: 2;
-  top: 164px;
+  top: calc(max(18px, env(safe-area-inset-top)) + 190px);
   left: 20px;
   padding: 7px 10px;
   border-radius: 999px;
@@ -320,6 +307,33 @@ button {
   font-size: 0.68rem;
   font-weight: 800;
   backdrop-filter: blur(8px);
+}
+
+.native-map-controls {
+  position: absolute;
+  z-index: 2;
+  top: calc(max(18px, env(safe-area-inset-top)) + 138px);
+  right: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.native-map-controls button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #2563eb;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.native-map-controls svg {
+  width: 22px;
+  height: 22px;
 }
 
 .native-map-entry {

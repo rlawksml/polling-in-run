@@ -47,6 +47,10 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
         )
     }
 
+    func recenterNativeMap(center: CLLocationCoordinate2D) {
+        embeddedMapView.setCenter(center, animated: true)
+    }
+
     func updateNativeTouchAreas(_ areas: [CGRect]) {
         (webView as? PassthroughWebView)?.interactiveRects = areas
     }

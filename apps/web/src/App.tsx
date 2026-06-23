@@ -39,10 +39,11 @@ const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
 const NATIVE_MAP_FACILITY_LIMIT = 300
 const NATIVE_TOUCH_AREA_SELECTORS = [
-  '.top-bar',
+  '.home-brand-card',
   '.app-loading-card',
   '.facility-filter',
   '.facility-status',
+  '.native-map-controls',
   '.native-map-status',
   '.location-card',
   '.records-panel',
@@ -612,6 +613,27 @@ function App() {
     setActiveTab('records')
   }
 
+  const moveNativeMapToCurrentLocation = () => {
+    requestLocation()
+
+    if (currentLatitude === undefined || currentLongitude === undefined) {
+      return
+    }
+
+    void NativeMap.recenter({
+      center: {
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+      },
+    }).catch((error) => {
+      setNativeMapMessage(
+        error instanceof Error
+          ? error.message
+          : '현재 위치로 지도를 이동하지 못했어요.',
+      )
+    })
+  }
+
   const updateRunGoal = (goalKey: keyof RunGoals, value: string) => {
     const nextGoals = {
       ...runGoals,
@@ -673,20 +695,10 @@ function App() {
         />
       )}
 
-      {!isRunningSessionActive && (
-        <header className="top-bar">
-          <div>
-            <p className="eyebrow">POLLING IN RUN</p>
-            <h1>달리기 좋은 순간이에요.</h1>
-          </div>
-          <Button
-            className="profile-button"
-            type="button"
-            aria-label="마이 페이지"
-            onClick={() => setActiveTab('my')}
-          >
-            MY
-          </Button>
+      {!isRunningSessionActive && activeTab === 'home' && (
+        <header className="home-brand-card">
+          <p className="eyebrow">POLLING IN RUN</p>
+          <h1>달리기 좋은 순간이에요.</h1>
         </header>
       )}
 
@@ -752,6 +764,34 @@ function App() {
             {nativeMapMessage}
           </div>
         )}
+
+      {!isRunningSessionActive && activeTab === 'home' && isNativePlatform && (
+        <div className="native-map-controls" aria-label="지도 제어">
+          <Button
+            type="button"
+            onClick={moveNativeMapToCurrentLocation}
+            aria-label="현재 위치로 이동"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="currentColor" />
+              <circle
+                cx="12"
+                cy="12"
+                r="8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <path
+                d="M12 2v3M12 19v3M2 12h3M19 12h3"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+          </Button>
+        </div>
+      )}
 
       {!isRunningSessionActive && activeTab === 'home' && (
         <section className={`location-card ${hasLocationError ? 'is-error' : ''}`}>

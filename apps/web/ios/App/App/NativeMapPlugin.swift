@@ -9,6 +9,7 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "NativeMap"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "recenter", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setTouchAreas", returnType: CAPPluginReturnPromise)
     ]
@@ -56,6 +57,24 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    @objc func recenter(_ call: CAPPluginCall) {
+        guard let center = parseCenter(call) else {
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            guard
+                let mainViewController = self?.bridge?.viewController as? MainViewController
+            else {
+                call.reject("MainViewController is not available")
+                return
+            }
+
+            mainViewController.recenterNativeMap(center: center)
+            call.resolve()
+        }
+    }
+
     @objc func setTouchAreas(_ call: CAPPluginCall) {
         let areaPayloads = call.getArray("areas", JSObject.self) ?? []
         let areas = areaPayloads.compactMap(parseTouchArea)
@@ -77,6 +96,17 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
         center: CLLocationCoordinate2D,
         facilities: [NativeMapFacility]
     )? {
+        guard let center = parseCenter(call) else {
+            return nil
+        }
+
+        let facilityPayloads = call.getArray("facilities", JSObject.self) ?? []
+        let facilities = facilityPayloads.compactMap(parseFacility)
+
+        return (center, facilities)
+    }
+
+    private func parseCenter(_ call: CAPPluginCall) -> CLLocationCoordinate2D? {
         guard let centerPayload = call.getObject("center") else {
             call.reject("center is required")
             return nil
@@ -90,11 +120,7 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
             return nil
         }
 
-        let facilityPayloads = call.getArray("facilities", JSObject.self) ?? []
-        let facilities = facilityPayloads.compactMap(parseFacility)
-        let center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-
-        return (center, facilities)
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
     private func parseFacility(_ payload: JSObject) -> NativeMapFacility? {
