@@ -215,9 +215,12 @@ button {
 .home-brand-card {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 52px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 138px);
   right: 20px;
-  display: grid;
+  display: inline-flex;
+  width: max-content;
+  max-width: calc(100% - 260px);
+  align-items: center;
   padding: 8px 12px;
   border: 1px solid rgba(16, 24, 40, 0.08);
   border-radius: 999px;
@@ -307,7 +310,7 @@ button {
 .native-map-controls {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 138px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 190px);
   right: 20px;
   display: grid;
   gap: 8px;
