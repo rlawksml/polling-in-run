@@ -38,18 +38,18 @@
 
 ## 구현 경로
 
-- Capacitor에서 Apple MapKit native 화면을 별도로 열어 붙이는 경로를 1차 구현안으로 둔다.
+- Capacitor에서 Apple MapKit native `MKMapView`를 WebView 아래에 깔아 홈 화면 지도 영역을 대체한다.
 - React는 local-first `facilities.json`에서 현재 위치와 지도 영역 기준으로 시설을 필터링한다.
-- Native Map 화면에는 현재 위치와 제한된 시설 배열만 넘긴다.
-- 처음부터 WebView 안에 native map을 끼워 넣지 않고, Swift `UIViewController`를 present하는 방식으로 시작한다.
+- iOS에서는 KakaoMap 컴포넌트를 렌더링하지 않고, `NativeMap.sync(...)`로 현재 위치와 제한된 시설 배열을 native map에 넘긴다.
+- WebView overlay 때문에 지도 드래그/줌/annotation 터치가 막히는 구간은 다음 실기기 검증에서 확인한다.
 
 상세 구현 경로는 [`Apple MapKit Native 구현 경로`](./apple-mapkit-native.md)에 정리한다.
 
 ## 다음 작업
 
-- iPhone 실기기에서 `NativeMap` Capacitor plugin을 열어 현재 위치와 시설 annotation 표시를 검증한다.
-- Swift `NativeMapViewController`의 annotation 상세, 색상, clustering 필요 여부를 확인한다.
-- native bridge가 과하면 단기적으로 외부 지도 앱 연동과 시설 리스트/카드 중심 UX를 유지한다.
+- iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도, 현재 위치, 시설 annotation 표시를 검증한다.
+- Swift embedded `MKMapView`의 annotation 상세, 색상, clustering 필요 여부를 확인한다.
+- WebView touch pass-through가 필요하면 native map 상호작용 전략을 별도 작업으로 분리한다.
 - 시설 데이터 local-first JSON 구조는 완료했으므로 지도 제공자가 바뀌어도 마커 데이터 모델은 유지한다.
 
 ## 근거

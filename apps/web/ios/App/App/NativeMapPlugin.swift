@@ -7,26 +7,14 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "NativeMapPlugin"
     public let jsName = "NativeMap"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func open(_ call: CAPPluginCall) {
-        guard let centerPayload = call.getObject("center") else {
-            call.reject("center is required")
+        guard let payload = parseMapPayload(call) else {
             return
         }
-
-        guard
-            let latitude = centerPayload["latitude"] as? Double,
-            let longitude = centerPayload["longitude"] as? Double
-        else {
-            call.reject("center.latitude and center.longitude are required")
-            return
-        }
-
-        let facilityPayloads = call.getArray("facilities", JSObject.self) ?? []
-        let facilities = facilityPayloads.compactMap(parseFacility)
-        let center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else {
@@ -35,14 +23,59 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
             }
 
             let mapViewController = NativeMapViewController(
-                center: center,
-                facilities: facilities
+                center: payload.center,
+                facilities: payload.facilities
             )
             mapViewController.modalPresentationStyle = .fullScreen
             self.bridge?.viewController?.present(mapViewController, animated: true) {
                 call.resolve()
             }
         }
+    }
+
+    @objc func sync(_ call: CAPPluginCall) {
+        guard let payload = parseMapPayload(call) else {
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            guard
+                let mainViewController = self?.bridge?.viewController as? MainViewController
+            else {
+                call.reject("MainViewController is not available")
+                return
+            }
+
+            mainViewController.updateNativeMap(
+                center: payload.center,
+                facilities: payload.facilities
+            )
+            call.resolve()
+        }
+    }
+
+    private func parseMapPayload(_ call: CAPPluginCall) -> (
+        center: CLLocationCoordinate2D,
+        facilities: [NativeMapFacility]
+    )? {
+        guard let centerPayload = call.getObject("center") else {
+            call.reject("center is required")
+            return nil
+        }
+
+        guard
+            let latitude = centerPayload["latitude"] as? Double,
+            let longitude = centerPayload["longitude"] as? Double
+        else {
+            call.reject("center.latitude and center.longitude are required")
+            return nil
+        }
+
+        let facilityPayloads = call.getArray("facilities", JSObject.self) ?? []
+        let facilities = facilityPayloads.compactMap(parseFacility)
+        let center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+
+        return (center, facilities)
     }
 
     private func parseFacility(_ payload: JSObject) -> NativeMapFacility? {

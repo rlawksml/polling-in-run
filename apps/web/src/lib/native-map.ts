@@ -14,6 +14,13 @@ type NativeMapPlugin = {
     }
     facilities: NativeMapFacility[]
   }): Promise<void>
+  sync(options: {
+    center: {
+      latitude: number
+      longitude: number
+    }
+    facilities: NativeMapFacility[]
+  }): Promise<void>
 }
 
 export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
