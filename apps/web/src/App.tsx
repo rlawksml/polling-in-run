@@ -489,8 +489,19 @@ function App() {
 
     let animationFrameId = 0
 
-    const getInteractiveTouchAreas = (): NativeMapTouchArea[] =>
-      NATIVE_TOUCH_AREA_SELECTORS.flatMap((selector) =>
+    const getInteractiveTouchAreas = (): NativeMapTouchArea[] => {
+      if (running.status === 'finished') {
+        return [
+          {
+            height: window.innerHeight,
+            width: window.innerWidth,
+            x: 0,
+            y: 0,
+          },
+        ]
+      }
+
+      return NATIVE_TOUCH_AREA_SELECTORS.flatMap((selector) =>
         Array.from(document.querySelectorAll<HTMLElement>(selector)),
       )
         .map((element) => {
@@ -514,6 +525,7 @@ function App() {
           }
         })
         .filter((area): area is NativeMapTouchArea => area !== null)
+    }
 
     const syncTouchAreas = () => {
       window.cancelAnimationFrame(animationFrameId)
@@ -525,15 +537,21 @@ function App() {
     }
 
     syncTouchAreas()
+    document.addEventListener('focusin', syncTouchAreas)
+    document.addEventListener('focusout', syncTouchAreas)
     window.addEventListener('resize', syncTouchAreas)
     window.addEventListener('orientationchange', syncTouchAreas)
     window.visualViewport?.addEventListener('resize', syncTouchAreas)
+    window.visualViewport?.addEventListener('scroll', syncTouchAreas)
 
     return () => {
       window.cancelAnimationFrame(animationFrameId)
+      document.removeEventListener('focusin', syncTouchAreas)
+      document.removeEventListener('focusout', syncTouchAreas)
       window.removeEventListener('resize', syncTouchAreas)
       window.removeEventListener('orientationchange', syncTouchAreas)
       window.visualViewport?.removeEventListener('resize', syncTouchAreas)
+      window.visualViewport?.removeEventListener('scroll', syncTouchAreas)
       void NativeMap.setTouchAreas({ areas: [] }).catch(() => undefined)
     }
   }, [
