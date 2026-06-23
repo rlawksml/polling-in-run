@@ -6,13 +6,22 @@
 
 ## 구현 방향
 
-FastAPI가 여러 공공데이터 원본을 공통 시설 모델로 정규화하고, React는 현재 위치 주변의 정규화된 시설만 표시한다.
+FastAPI가 여러 공공데이터 원본을 공통 시설 모델로 정규화하고, React는 현재 위치 주변의 정규화된 시설만 표시한다. local-first iPhone 프로토타입에서는 FastAPI를 상시 서버가 아니라 데이터 갱신 도구로도 사용한다.
 
 ```text
 공공데이터 원본
 → FastAPI 정규화·거리 필터
 → 공통 시설 API
 → React 지도 마커
+```
+
+```text
+공공데이터 원본
+→ FastAPI 정규화
+→ npm run export:facilities
+→ apps/web/public/data/facilities.json
+→ React 로컬 필터·거리 계산
+→ 지도 마커
 ```
 
 ## 확인한 데이터 소스
@@ -47,6 +56,20 @@ FastAPI가 여러 공공데이터 원본을 공통 시설 모델로 정규화하
 
 - 서버 배포와 장애 지점이 추가된다.
 - 초기에는 정적 데이터만 표시하는 방식보다 구현량이 많다.
+
+## Local-first JSON 전략
+
+### 장점
+
+- iPhone 앱에서 FastAPI 서버 없이 시설 데이터를 표시할 수 있다.
+- Kakao Maps, Apple MapKit native 등 지도 제공자가 바뀌어도 같은 `Facility` 데이터를 재사용할 수 있다.
+- 공공데이터 원본 API 키를 앱 런타임에서 직접 쓰지 않는다.
+
+### 단점
+
+- 시설 데이터가 바뀌면 JSON을 다시 생성하고 앱을 갱신해야 한다.
+- 현재 JSON은 약 5.4MB라 사용할 수 있지만, iPhone 실기기에서 로딩 성능을 확인해야 한다.
+- 데이터가 더 커지면 지역별 분할, gzip 압축, 증분 갱신을 검토해야 한다.
 
 ## 공통 시설 모델 초안
 
@@ -97,6 +120,8 @@ GET /api/facilities?latitude=37.5665&longitude=126.9780&radius_m=3000&type=water
 - 음수대는 서울 열린데이터광장 실제 데이터를 사용한다.
 - 화장실은 공간데이터마켓 DBF 원본의 실제 데이터를 사용한다.
 - 실제 시설이 밀집된 지역에서는 카카오맵 MarkerClusterer로 가까운 마커를 묶어 표시한다.
+- `npm run export:facilities`로 실제 음수대와 화장실 6,477건을 `apps/web/public/data/facilities.json`에 생성했다.
+- 프론트는 로컬 JSON을 먼저 조회하고, 실패하면 기존 FastAPI `/api/facilities`로 fallback한다.
 
 ## 마커 표시 성능 전략
 
@@ -139,3 +164,4 @@ GET /api/facilities?latitude=37.5665&longitude=126.9780&radius_m=3000&type=water
 - 밀집 지역에서 가까운 시설 마커를 클러스터로 묶어 표시할 수 있다.
 - 데이터가 없거나 조회에 실패한 상태를 안내한다.
 - 원본 출처와 마지막 동기화 시점을 추적할 수 있다.
+- FastAPI 서버 없이도 로컬 JSON으로 시설을 조회할 수 있다.

@@ -1,4 +1,11 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -37,43 +44,6 @@ vi.mock('./components/KakaoMap', async () => {
   }
 })
 
-const authMockState = vi.hoisted(() => ({
-  checkUserIdAvailability: vi.fn(() => Promise.resolve(true)),
-  deleteCurrentUserAccount: vi.fn(() => Promise.resolve()),
-  session: null as {
-    accessToken: string
-    email: string | null
-    userId: string
-  } | null,
-  signInWithUserId: vi.fn(() =>
-    Promise.resolve({
-      message: 'Supabase 환경변수를 설정하면 로그인을 진행할 수 있어요.',
-      session: null,
-    }),
-  ),
-  signUpWithUserId: vi.fn(() =>
-    Promise.resolve({
-      message: 'Supabase 환경변수를 설정하면 회원가입을 진행할 수 있어요.',
-      session: null,
-    }),
-  ),
-}))
-
-vi.mock('./api/auth', () => ({
-  checkUserIdAvailability: authMockState.checkUserIdAvailability,
-  deleteCurrentUserAccount: authMockState.deleteCurrentUserAccount,
-  getCurrentAuthSession: vi.fn(() => Promise.resolve(authMockState.session)),
-  isSupabaseConfigured: false,
-  isValidUserId: vi.fn((userId: string) =>
-    /^[a-z0-9_-]{4,24}$/.test(userId.trim().toLowerCase()),
-  ),
-  normalizeUserId: vi.fn((userId: string) => userId.trim().toLowerCase()),
-  signInWithUserId: authMockState.signInWithUserId,
-  signOut: vi.fn(() => Promise.resolve()),
-  signUpWithUserId: authMockState.signUpWithUserId,
-  subscribeAuthSession: vi.fn(() => () => undefined),
-}))
-
 const facilityResponse = [
   {
     id: 'water-sample-1',
@@ -97,6 +67,12 @@ const facilityResponse = [
   },
 ]
 
+const localFacilityPayload = {
+  count: facilityResponse.length,
+  facilities: facilityResponse,
+  generated_at: '2026-06-23T00:00:00.000Z',
+}
+
 function renderApp() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -112,20 +88,13 @@ function renderApp() {
 describe('App', () => {
   afterEach(() => {
     cleanup()
-    authMockState.session = null
-    authMockState.checkUserIdAvailability.mockReset()
-    authMockState.checkUserIdAvailability.mockResolvedValue(true)
-    authMockState.deleteCurrentUserAccount.mockReset()
-    authMockState.deleteCurrentUserAccount.mockResolvedValue(undefined)
-    authMockState.signInWithUserId.mockClear()
-    authMockState.signUpWithUserId.mockClear()
     window.localStorage.clear()
     vi.restoreAllMocks()
   })
 
   it('shows the current location and running actions', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
     const getCurrentPosition = vi.fn((success: PositionCallback) => {
       success({
@@ -156,14 +125,12 @@ describe('App', () => {
     expect(screen.getByText('시설 2개')).toBeInTheDocument()
     expect(screen.getByText('약 12m 정확도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
-    expect(fetch).toHaveBeenCalledWith(
-      '/api/facilities?latitude=37.5665&longitude=126.978&radius_m=3000&min_lat=37.55&max_lat=37.58&min_lng=126.96&max_lng=127',
-    )
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/data/facilities.json')
   })
 
   it('lets the user retry after denying location permission', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
     const getCurrentPosition = vi.fn(
       (_success: PositionCallback, error: PositionErrorCallback) => {
@@ -192,7 +159,7 @@ describe('App', () => {
 
   it('filters facilities by type', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
 
     Object.defineProperty(globalThis.navigator, 'geolocation', {
@@ -209,7 +176,7 @@ describe('App', () => {
 
   it('moves through the first running session flow', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
 
     Object.defineProperty(globalThis.navigator, 'geolocation', {
@@ -243,7 +210,7 @@ describe('App', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
 
-    expect(screen.getByText(/기록을 이 기기에 임시 저장했어요/)).toBeInTheDocument()
+    expect(screen.getByText(/기록을 이 iPhone 로컬 저장소에 저장했어요/)).toBeInTheDocument()
     expect(window.localStorage.getItem('polling-in-run.records.v1')).toContain(
       '가볍게 달린 날',
     )
@@ -253,18 +220,15 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '기록' }))
 
-    expect(screen.getByText('ID/PW로 기록을 이어갈 준비')).toBeInTheDocument()
-    expect(screen.getByText('러닝 기록은 로그인 후 확인할 수 있어요.')).toBeInTheDocument()
+    expect(screen.getByText('저장한 러닝 기록')).toBeInTheDocument()
+    expect(screen.getByLabelText('러닝 기록 상세')).toHaveTextContent(
+      '가볍게 달린 날',
+    )
   })
 
-  it('lets a signed-in user open and delete a saved running record', async () => {
-    authMockState.session = {
-      accessToken: 'runner-access-token',
-      email: 'runner@polling-in-run.local',
-      userId: 'runner',
-    }
+  it('opens and deletes a local running record without signing in', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
 
     Object.defineProperty(globalThis.navigator, 'geolocation', {
@@ -272,7 +236,7 @@ describe('App', () => {
       value: undefined,
     })
     window.localStorage.setItem(
-      'polling-in-run.records.v1.user.runner',
+      'polling-in-run.records.v1',
       JSON.stringify([
         {
           distanceM: 1200,
@@ -288,9 +252,6 @@ describe('App', () => {
 
     renderApp()
 
-    fireEvent.click(screen.getByRole('button', { name: '마이' }))
-    await screen.findByLabelText('로그인 상태')
-
     fireEvent.click(screen.getByRole('button', { name: '기록' }))
 
     expect(screen.getByText('저장한 러닝 기록')).toBeInTheDocument()
@@ -301,14 +262,99 @@ describe('App', () => {
     expect(screen.getByText('아직 저장한 기록이 없어요.')).toBeInTheDocument()
     await waitFor(() =>
       expect(
-        window.localStorage.getItem('polling-in-run.records.v1.user.runner'),
+        window.localStorage.getItem('polling-in-run.records.v1'),
       ).toBe('[]'),
     )
   })
 
+  it('filters, sorts, and previews routes on Records page', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+    window.localStorage.setItem(
+      'polling-in-run.records.v1',
+      JSON.stringify([
+        {
+          distanceM: 1200,
+          elapsedMs: 360000,
+          id: 'run-1',
+          memo: '한강 다리 옆',
+          pace: '5:00 /km',
+          routePointCount: 3,
+          routePoints: [
+            {
+              accuracy: 10,
+              latitude: 37.5665,
+              longitude: 126.978,
+              timestamp: 1000,
+            },
+            {
+              accuracy: 10,
+              latitude: 37.567,
+              longitude: 126.979,
+              timestamp: 2000,
+            },
+            {
+              accuracy: 10,
+              latitude: 37.568,
+              longitude: 126.98,
+              timestamp: 3000,
+            },
+          ],
+          savedAt: '2026-06-21T00:00:00.000Z',
+        },
+        {
+          distanceM: 3200,
+          elapsedMs: 1500000,
+          id: 'run-2',
+          memo: '',
+          pace: '7:49 /km',
+          routePointCount: 0,
+          savedAt: '2026-05-12T00:00:00.000Z',
+        },
+      ]),
+    )
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '기록' }))
+
+    expect(screen.getByLabelText('러닝 경로 간단 시각화')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '메모 있음' }))
+
+    expect(screen.getByText('한강 다리 옆')).toBeInTheDocument()
+    expect(screen.queryByText('3.20 km')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '전체' }))
+    fireEvent.change(screen.getByLabelText('월별 기록 필터'), {
+      target: { value: '2026-05' },
+    })
+
+    expect(screen.getAllByText('3.20 km').length).toBeGreaterThan(0)
+    expect(screen.queryByText('1.20 km')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('월별 기록 필터'), {
+      target: { value: 'all' },
+    })
+    fireEvent.change(screen.getByLabelText('러닝 기록 정렬'), {
+      target: { value: 'distance' },
+    })
+
+    const recordList = screen.getByLabelText('러닝 기록 목록')
+    const firstRecord = within(recordList).getAllByRole('button')[0]
+
+    expect(firstRecord).toHaveTextContent('3.20 km')
+  })
+
   it('tracks running location points while the screen is active', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
     const clearWatch = vi.fn()
     const getCurrentPosition = vi.fn((success: PositionCallback) => {
@@ -391,101 +437,9 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows the auth form shell and validates inputs on My page', async () => {
+  it('shows local profile, record summary, and settings on My page', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
-    )
-
-    Object.defineProperty(globalThis.navigator, 'geolocation', {
-      configurable: true,
-      value: undefined,
-    })
-
-    renderApp()
-
-    fireEvent.click(screen.getByRole('button', { name: '마이' }))
-
-    expect(screen.getByText('ID/PW로 기록을 이어갈 준비')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
-    expect(screen.getByText(/VITE_SUPABASE_URL/)).toBeInTheDocument()
-    expect(screen.getByText(/비밀번호 찾기, 이메일 인증, 소셜 로그인/)).toBeInTheDocument()
-
-    fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
-    expect(screen.getByText(/ID는 영문 소문자/)).toBeInTheDocument()
-
-    fireEvent.change(screen.getByLabelText('ID'), {
-      target: { value: 'runner' },
-    })
-    fireEvent.change(screen.getByLabelText('비밀번호'), {
-      target: { value: '1234567' },
-    })
-    fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
-    expect(screen.getByText('비밀번호는 8자 이상 입력해주세요.')).toBeInTheDocument()
-
-    fireEvent.change(screen.getByLabelText('비밀번호'), {
-      target: { value: '12345678' },
-    })
-    fireEvent.click(screen.getAllByRole('button', { name: '로그인' })[1])
-    expect(
-      await screen.findByText(/Supabase 환경변수를 설정하면/),
-    ).toBeInTheDocument()
-
-    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[0])
-    expect(screen.getByRole('heading', { name: '회원가입' })).toBeInTheDocument()
-    expect(screen.getByLabelText('비밀번호 확인')).toBeInTheDocument()
-  })
-
-  it('requires a user ID availability check before signing up', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
-    )
-
-    Object.defineProperty(globalThis.navigator, 'geolocation', {
-      configurable: true,
-      value: undefined,
-    })
-
-    renderApp()
-
-    fireEvent.click(screen.getByRole('button', { name: '마이' }))
-    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[0])
-
-    fireEvent.change(screen.getByLabelText('ID'), {
-      target: { value: 'runner' },
-    })
-    fireEvent.change(screen.getByLabelText('비밀번호'), {
-      target: { value: '12345678' },
-    })
-    fireEvent.change(screen.getByLabelText('비밀번호 확인'), {
-      target: { value: '12345678' },
-    })
-
-    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[1])
-    expect(screen.getByText('회원가입 전에 ID 중복 확인을 완료해주세요.')).toBeInTheDocument()
-    expect(authMockState.signUpWithUserId).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'ID 중복 확인' }))
-
-    expect(await screen.findByText('사용할 수 있는 ID예요.')).toBeInTheDocument()
-
-    fireEvent.click(screen.getAllByRole('button', { name: '회원가입' })[1])
-
-    await waitFor(() =>
-      expect(authMockState.signUpWithUserId).toHaveBeenCalledWith(
-        'runner',
-        '12345678',
-      ),
-    )
-  })
-
-  it('lets a signed-in user confirm account deletion', async () => {
-    authMockState.session = {
-      accessToken: 'runner-access-token',
-      email: 'runner@polling-in-run.local',
-      userId: 'runner',
-    }
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(facilityResponse), { status: 200 }),
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
 
     Object.defineProperty(globalThis.navigator, 'geolocation', {
@@ -493,30 +447,54 @@ describe('App', () => {
       value: undefined,
     })
     window.localStorage.setItem(
-      'polling-in-run.records.v1.user.runner',
-      JSON.stringify([{ id: 'run-1' }]),
+      'polling-in-run.records.v1',
+      JSON.stringify([
+        {
+          distanceM: 1200,
+          elapsedMs: 360000,
+          id: 'run-1',
+          memo: '요약용 기록',
+          pace: '5:00 /km',
+          routePointCount: 12,
+          savedAt: '2026-06-21T00:00:00.000Z',
+        },
+        {
+          distanceM: 3000,
+          elapsedMs: 1200000,
+          id: 'run-2',
+          memo: '긴 기록',
+          pace: '6:40 /km',
+          routePointCount: 30,
+          savedAt: '2026-06-05T00:00:00.000Z',
+        },
+      ]),
     )
 
     renderApp()
 
     fireEvent.click(screen.getByRole('button', { name: '마이' }))
-    await screen.findByLabelText('로그인 상태')
 
-    fireEvent.click(screen.getByRole('button', { name: '회원 탈퇴' }))
-    expect(screen.getByText('회원 탈퇴를 한 번 더 누르면 계정을 삭제해요.')).toBeInTheDocument()
+    expect(screen.getByText('내 iPhone에 저장하는 러닝 노트')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Solo Runner' })).toBeInTheDocument()
+    expect(screen.getByText('총 러닝 횟수')).toBeInTheDocument()
+    expect(screen.getByText('2개')).toBeInTheDocument()
+    expect(screen.getByText('총 뛴 거리')).toBeInTheDocument()
+    expect(screen.getAllByText('4.20 km').length).toBeGreaterThan(0)
+    expect(screen.getByText('최장 러닝')).toBeInTheDocument()
+    expect(screen.getByText('3.00 km')).toBeInTheDocument()
+    expect(screen.getByText('목표 설정과 진행률')).toBeInTheDocument()
+    expect(screen.getByText('D3 최근 4개월 거리')).toBeInTheDocument()
+    expect(screen.getByText('D3 목표 대비 비교')).toBeInTheDocument()
+    expect(screen.getByText('이번 달 러닝 날짜')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '정말 탈퇴하기' }))
+    fireEvent.change(screen.getByLabelText('주간 목표'), {
+      target: { value: '15' },
+    })
 
-    await waitFor(() =>
-      expect(authMockState.deleteCurrentUserAccount).toHaveBeenCalledWith(
-        authMockState.session,
-      ),
+    expect(window.localStorage.getItem('polling-in-run.goals.v1')).toContain(
+      '"weeklyDistanceKm":15',
     )
-    expect(
-      window.localStorage.getItem('polling-in-run.records.v1.user.runner'),
-    ).toBeNull()
-    expect(
-      await screen.findByText(/회원 탈퇴가 완료됐어요/),
-    ).toBeInTheDocument()
+    expect(screen.getByText('지도 전략')).toBeInTheDocument()
+    expect(screen.getByText('로그인과 동기화')).toBeInTheDocument()
   })
 })

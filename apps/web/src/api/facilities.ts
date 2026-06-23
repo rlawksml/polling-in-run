@@ -31,9 +31,89 @@ type FacilityQuery = {
   radiusM?: number
 }
 
-export async function getFacilities(
-  query: FacilityQuery = {},
-): Promise<Facility[]> {
+type LocalFacilityPayload = {
+  count: number
+  facilities: Facility[]
+  generated_at: string
+}
+
+const LOCAL_FACILITIES_URL = '/data/facilities.json'
+const EARTH_RADIUS_M = 6371000
+
+function toRadians(degrees: number) {
+  return degrees * (Math.PI / 180)
+}
+
+function calculateDistanceM(
+  originLatitude: number,
+  originLongitude: number,
+  destinationLatitude: number,
+  destinationLongitude: number,
+) {
+  const latitudeDelta = toRadians(destinationLatitude - originLatitude)
+  const longitudeDelta = toRadians(destinationLongitude - originLongitude)
+  const originLatitudeRad = toRadians(originLatitude)
+  const destinationLatitudeRad = toRadians(destinationLatitude)
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(originLatitudeRad) *
+      Math.cos(destinationLatitudeRad) *
+      Math.sin(longitudeDelta / 2) ** 2
+
+  return Math.round(EARTH_RADIUS_M * 2 * Math.asin(Math.sqrt(haversine)))
+}
+
+function isInsideBounds(facility: Facility, bounds?: FacilityBounds | null) {
+  if (!bounds) {
+    return true
+  }
+
+  return (
+    bounds.minLatitude <= facility.latitude &&
+    facility.latitude <= bounds.maxLatitude &&
+    bounds.minLongitude <= facility.longitude &&
+    facility.longitude <= bounds.maxLongitude
+  )
+}
+
+function applyLocalFacilityQuery(facilities: Facility[], query: FacilityQuery) {
+  const boundedFacilities = facilities.filter((facility) =>
+    isInsideBounds(facility, query.bounds),
+  )
+
+  if (query.latitude === undefined || query.longitude === undefined) {
+    return boundedFacilities
+  }
+
+  const radiusM = query.radiusM ?? 3000
+
+  return boundedFacilities
+    .map((facility) => ({
+      ...facility,
+      distance_m: calculateDistanceM(
+        query.latitude!,
+        query.longitude!,
+        facility.latitude,
+        facility.longitude,
+      ),
+    }))
+    .filter((facility) => facility.distance_m <= radiusM)
+    .sort((a, b) => (a.distance_m ?? 0) - (b.distance_m ?? 0))
+}
+
+async function getLocalFacilities(query: FacilityQuery) {
+  const response = await fetch(LOCAL_FACILITIES_URL)
+
+  if (!response.ok) {
+    throw new Error(`Local facility request failed: ${response.status}`)
+  }
+
+  const payload = (await response.json()) as LocalFacilityPayload
+
+  return applyLocalFacilityQuery(payload.facilities, query)
+}
+
+async function getApiFacilities(query: FacilityQuery) {
   const searchParams = new URLSearchParams()
 
   if (query.latitude !== undefined && query.longitude !== undefined) {
@@ -59,4 +139,14 @@ export async function getFacilities(
   }
 
   return response.json() as Promise<Facility[]>
+}
+
+export async function getFacilities(
+  query: FacilityQuery = {},
+): Promise<Facility[]> {
+  try {
+    return await getLocalFacilities(query)
+  } catch {
+    return getApiFacilities(query)
+  }
 }

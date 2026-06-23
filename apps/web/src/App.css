@@ -539,6 +539,60 @@ button {
   gap: 14px;
 }
 
+.record-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.record-controls button,
+.record-controls label {
+  min-height: 42px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.record-controls button {
+  color: #667085;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.record-controls button.is-active {
+  border-color: rgba(37, 99, 235, 0.3);
+  background: #eff6ff;
+  color: #175cd3;
+}
+
+.record-controls label {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.record-controls label span {
+  color: #667085;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.record-controls select {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #101828;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  outline: 0;
+}
+
+.records-empty.is-filtered {
+  border: 1px dashed rgba(37, 99, 235, 0.22);
+  background: #eff6ff;
+}
+
 .record-list {
   display: grid;
   gap: 10px;
@@ -618,6 +672,55 @@ button {
   color: #93c5fd;
 }
 
+.record-route-preview {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.record-route-preview strong {
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.record-route-preview span {
+  color: #d0d5dd;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.record-route-preview svg {
+  width: 100%;
+  border-radius: 14px;
+  background:
+    linear-gradient(rgba(147, 197, 253, 0.1), rgba(147, 197, 253, 0.04)),
+    #0b1220;
+}
+
+.record-route-preview path {
+  fill: none;
+  stroke: #93c5fd;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.record-route-preview circle {
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.record-route-preview .route-start {
+  fill: #22c55e;
+}
+
+.record-route-preview .route-end {
+  fill: #f97316;
+}
+
 .record-delete-button {
   min-height: 44px;
   border-radius: 14px;
@@ -661,6 +764,257 @@ button {
   color: #667085;
   font-size: 0.82rem;
   line-height: 1.55;
+}
+
+.local-profile-card,
+.settings-list article,
+.my-summary-grid article {
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 20px;
+  background: #f8fafc;
+}
+
+.local-profile-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.local-profile-card h2,
+.local-profile-card p {
+  margin: 0;
+}
+
+.local-profile-card h2 {
+  color: #101828;
+  font-size: 1.25rem;
+  letter-spacing: -0.04em;
+}
+
+.my-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.my-summary-grid article {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.my-summary-grid span,
+.settings-list span {
+  color: #667085;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.my-summary-grid strong {
+  color: #101828;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.dashboard-section {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 20px;
+  background: #f8fafc;
+}
+
+.section-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: #101828;
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.goal-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.goal-inputs label {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.goal-inputs label span {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.goal-inputs input {
+  width: 100%;
+  padding: 0 26px 0 0;
+  border: 0;
+  background: transparent;
+  color: #101828;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 950;
+  outline: 0;
+}
+
+.goal-inputs em {
+  position: absolute;
+  right: 12px;
+  bottom: 13px;
+  color: #667085;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.progress-list {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-list article {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.progress-list article > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-list strong {
+  color: #101828;
+  font-size: 0.84rem;
+}
+
+.progress-list span,
+.progress-list small {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.progress-track {
+  overflow: hidden;
+  height: 9px;
+  border-radius: 999px;
+  background: #e4e7ec;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+}
+
+.distance-chart-svg,
+.goal-chart-svg {
+  width: 100%;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.distance-chart-svg rect {
+  fill: #2563eb;
+}
+
+.goal-chart-target {
+  fill: #dbeafe;
+}
+
+.goal-chart-actual {
+  fill: #2563eb;
+}
+
+.chart-value-label {
+  fill: #101828;
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+
+.chart-axis-label {
+  fill: #667085;
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.running-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.running-calendar span {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #98a2b3;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.running-calendar span.has-run {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+.settings-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-list article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+}
+
+.settings-list strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #101828;
+  font-size: 0.82rem;
+}
+
+.settings-badge {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #175cd3 !important;
+  font-size: 0.68rem !important;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.settings-badge.is-muted {
+  background: #f2f4f7;
+  color: #667085 !important;
 }
 
 .auth-mode-switch {

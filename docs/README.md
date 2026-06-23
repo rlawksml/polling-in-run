@@ -35,6 +35,9 @@
 - [`러닝 추적`](./features/run-tracking.md)
 - [`기록 저장`](./features/record-storage.md)
 - [`인증과 설정`](./features/auth-and-settings.md)
+- [`Local-first iPhone Prototype`](./features/local-first-iphone-prototype.md)
+- [`지도 전략`](./features/map-strategy.md)
+- [`Apple MapKit Native 구현 경로`](./features/apple-mapkit-native.md)
 
 ## Data Sources
 
@@ -49,6 +52,7 @@
 ## Blog Drafts
 
 - [`카카오맵과 공공데이터로 러닝 편의시설 지도 만들기`](./blog/카카오맵과_공공데이터로_러닝_편의시설_지도_만들기.md)
+- [`개발 의사결정 로그`](./blog/개발_의사결정_로그.md)
 
 ## 문서 작성 규칙
 
