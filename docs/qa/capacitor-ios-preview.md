@@ -50,11 +50,13 @@ VITE_API_BASE_URL=http://192.168.45.3:8000
 - [x] Kakao Maps JavaScript SDK의 iOS WebView origin 한계를 확인했다.
 - [x] Apple MapKit native 구현 경로를 문서화했다.
 - [x] Xcode에서 NativeMap plugin과 Swift embedded 지도 초안을 추가한다.
+- [x] React UI의 버튼·카드 영역만 WebView가 터치받고 나머지는 embedded MapKit으로 넘기는 touch pass-through를 추가한다.
 - [ ] 현재 위치 권한 요청이 표시된다.
 - [ ] 현재 위치 마커가 표시된다.
 - [ ] 시설 API가 `VITE_API_BASE_URL`을 통해 호출된다.
 - [ ] 음수대와 화장실 마커 또는 클러스터가 표시된다.
 - [ ] 홈 화면의 embedded Native MapKit에서 현재 위치와 시설 annotation이 표시된다.
+- [ ] 홈 화면의 embedded Native MapKit에서 드래그와 확대/축소 제스처가 동작한다.
 - [ ] 러닝 시작, 일시정지, 재개, 종료 흐름이 동작한다.
 - [ ] 러닝 결과 저장과 기록 조회가 동작한다.
 - [ ] local-first 기록 저장과 조회가 앱 환경에서 동작한다.
@@ -69,5 +71,5 @@ VITE_API_BASE_URL=http://192.168.45.3:8000
 ## 다음 결정
 
 - PWA 설치 경험과 Capacitor 앱 경험을 비교한다.
-- 홈 화면 embedded Apple MapKit의 실기기 표시와 WebView touch pass-through 필요 여부를 확인한다.
+- 홈 화면 embedded Apple MapKit의 실기기 표시와 touch pass-through 동작을 확인한다.
 - 실제 앱 배포를 목표로 할 경우 App Store 서명, 개인정보 안내, 위치 권한 문구를 별도 정리한다.

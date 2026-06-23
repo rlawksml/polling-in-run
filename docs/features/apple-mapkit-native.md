@@ -163,6 +163,8 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 - embedded native map은 현재 위치 표시와 음수대/화장실 annotation을 제공한다.
 - React 홈 화면에서는 iOS native platform일 때 KakaoMap 컴포넌트를 렌더링하지 않고 Apple MapKit 배경 지도를 사용한다.
 - React는 현재 표시 중인 시설을 최대 300개까지만 native 화면으로 넘긴다.
+- React는 `NativeMap.setTouchAreas(...)`로 버튼, 카드, 탭바의 viewport 좌표를 Swift에 넘긴다.
+- Swift `PassthroughWebView`는 해당 좌표 안에서는 WebView 터치를 유지하고, 그 밖의 영역은 embedded `MKMapView`가 드래그와 핀치 줌을 받을 수 있게 넘긴다.
 - Xcode simulator build 기준으로 Swift 컴파일과 앱 빌드를 통과했다.
 
 ## 남은 확인
@@ -170,4 +172,5 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 - 실제 iPhone 홈 화면에서 Apple MapKit 지도가 카카오맵 대신 보이는지 확인한다.
 - 위치 권한 허용 후 현재 위치 표시가 자연스러운지 확인한다.
 - annotation 개수가 많을 때 실기기 성능이 괜찮은지 확인하고 clustering 필요 여부를 결정한다.
-- WebView overlay 때문에 지도 드래그/줌/annotation 터치가 막히는 구간을 확인하고 pass-through 또는 native overlay 전략을 결정한다.
+- 홈 화면의 빈 지도 영역에서 드래그, 핀치 줌, annotation 터치가 자연스럽게 동작하는지 확인한다.
+- WebView overlay와 native map을 함께 쓰는 방식이 계속 불안정하면 주요 홈 UI까지 native overlay로 옮길지 결정한다.

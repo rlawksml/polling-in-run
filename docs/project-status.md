@@ -143,7 +143,7 @@ xcodebuild -project apps/web/ios/App/App.xcodeproj -scheme App -configuration De
 
 ### 바로 다음
 
-1. iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도, 현재 위치, 시설 annotation을 확인한다.
+1. iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도, 현재 위치, 시설 annotation, 지도 드래그·확대/축소를 확인한다.
 2. 모바일 브라우저와 Capacitor iOS 실기기 검증 체크리스트를 수행한다.
 3. 시설 JSON 크기와 로딩 성능을 iPhone에서 확인한다.
 
@@ -154,6 +154,7 @@ xcodebuild -project apps/web/ios/App/App.xcodeproj -scheme App -configuration De
 ### M5 남은 범위
 
 - NativeMap Capacitor plugin 초안은 추가했다.
+- React UI 좌표 기반 WebView touch pass-through를 추가했다.
 - iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시를 확인한다.
 - 시설 JSON 크기와 로딩 성능을 확인하고 필요하면 압축·분할 전략을 검토한다.
 

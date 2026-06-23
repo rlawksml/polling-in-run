@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import CoreLocation
 import Capacitor
 
@@ -8,7 +9,8 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "NativeMap"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTouchAreas", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func open(_ call: CAPPluginCall) {
@@ -50,6 +52,23 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
                 center: payload.center,
                 facilities: payload.facilities
             )
+            call.resolve()
+        }
+    }
+
+    @objc func setTouchAreas(_ call: CAPPluginCall) {
+        let areaPayloads = call.getArray("areas", JSObject.self) ?? []
+        let areas = areaPayloads.compactMap(parseTouchArea)
+
+        DispatchQueue.main.async { [weak self] in
+            guard
+                let mainViewController = self?.bridge?.viewController as? MainViewController
+            else {
+                call.reject("MainViewController is not available")
+                return
+            }
+
+            mainViewController.updateNativeTouchAreas(areas)
             call.resolve()
         }
     }
@@ -97,5 +116,18 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
             longitude: longitude,
             address: payload["address"] as? String ?? ""
         )
+    }
+
+    private func parseTouchArea(_ payload: JSObject) -> CGRect? {
+        guard
+            let x = payload["x"] as? Double,
+            let y = payload["y"] as? Double,
+            let width = payload["width"] as? Double,
+            let height = payload["height"] as? Double
+        else {
+            return nil
+        }
+
+        return CGRect(x: x, y: y, width: width, height: height)
     }
 }

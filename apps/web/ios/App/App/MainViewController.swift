@@ -4,14 +4,19 @@ import UIKit
 import WebKit
 
 final class PassthroughWebView: WKWebView {
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let hitView = super.hitTest(point, with: event)
+    var interactiveRects: [CGRect] = []
 
-        if hitView === self || hitView === scrollView {
-            return nil
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard !interactiveRects.isEmpty else {
+            return super.hitTest(point, with: event)
         }
 
-        return hitView
+        let touchSlop: CGFloat = 8
+        let isInteractivePoint = interactiveRects.contains {
+            $0.insetBy(dx: -touchSlop, dy: -touchSlop).contains(point)
+        }
+
+        return isInteractivePoint ? super.hitTest(point, with: event) : nil
     }
 }
 
@@ -40,6 +45,10 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
         embeddedMapView.addAnnotations(
             facilities.map { FacilityAnnotation(facility: $0) }
         )
+    }
+
+    func updateNativeTouchAreas(_ areas: [CGRect]) {
+        (webView as? PassthroughWebView)?.interactiveRects = areas
     }
 
     private func installEmbeddedMap() {

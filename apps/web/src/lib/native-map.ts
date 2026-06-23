@@ -6,6 +6,13 @@ export type NativeMapFacility = Pick<
   'address' | 'id' | 'latitude' | 'longitude' | 'name' | 'type'
 >
 
+export type NativeMapTouchArea = {
+  height: number
+  width: number
+  x: number
+  y: number
+}
+
 type NativeMapPlugin = {
   open(options: {
     center: {
@@ -13,6 +20,9 @@ type NativeMapPlugin = {
       longitude: number
     }
     facilities: NativeMapFacility[]
+  }): Promise<void>
+  setTouchAreas(options: {
+    areas: NativeMapTouchArea[]
   }): Promise<void>
   sync(options: {
     center: {

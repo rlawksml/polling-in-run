@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { extent, line, max, scaleBand, scaleLinear } from 'd3'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import {
   getFacilities,
   type FacilityBounds,
@@ -19,7 +19,11 @@ import {
   useRunningSession,
 } from './hooks/use-running-session'
 import './App.css'
-import { NativeMap, type NativeMapFacility } from './lib/native-map'
+import {
+  NativeMap,
+  type NativeMapFacility,
+  type NativeMapTouchArea,
+} from './lib/native-map'
 
 const locationMessages = {
   idle: '현재 위치를 준비하고 있어요.',
@@ -34,6 +38,19 @@ const locationMessages = {
 const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
 const NATIVE_MAP_FACILITY_LIMIT = 300
+const NATIVE_TOUCH_AREA_SELECTORS = [
+  '.top-bar',
+  '.app-loading-card',
+  '.facility-filter',
+  '.facility-status',
+  '.native-map-status',
+  '.location-card',
+  '.records-panel',
+  '.my-panel',
+  '.running-panel',
+  '.start-button',
+  '.bottom-nav',
+] as const
 const DEFAULT_RUN_GOALS = {
   monthlyDistanceKm: 40,
   weeklyDistanceKm: 10,
@@ -463,6 +480,81 @@ function App() {
       document.body.classList.remove('is-native-map')
     }
   }, [isNativePlatform])
+
+  useLayoutEffect(() => {
+    if (!isNativePlatform) {
+      return
+    }
+
+    let animationFrameId = 0
+
+    const getInteractiveTouchAreas = (): NativeMapTouchArea[] =>
+      NATIVE_TOUCH_AREA_SELECTORS.flatMap((selector) =>
+        Array.from(document.querySelectorAll<HTMLElement>(selector)),
+      )
+        .map((element) => {
+          const styles = window.getComputedStyle(element)
+          const rect = element.getBoundingClientRect()
+
+          if (
+            styles.display === 'none' ||
+            styles.visibility === 'hidden' ||
+            rect.width <= 0 ||
+            rect.height <= 0
+          ) {
+            return null
+          }
+
+          return {
+            height: rect.height,
+            width: rect.width,
+            x: rect.left,
+            y: rect.top,
+          }
+        })
+        .filter((area): area is NativeMapTouchArea => area !== null)
+
+    const syncTouchAreas = () => {
+      window.cancelAnimationFrame(animationFrameId)
+      animationFrameId = window.requestAnimationFrame(() => {
+        void NativeMap.setTouchAreas({
+          areas: getInteractiveTouchAreas(),
+        }).catch(() => undefined)
+      })
+    }
+
+    syncTouchAreas()
+    window.addEventListener('resize', syncTouchAreas)
+    window.addEventListener('orientationchange', syncTouchAreas)
+    window.visualViewport?.addEventListener('resize', syncTouchAreas)
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      window.removeEventListener('resize', syncTouchAreas)
+      window.removeEventListener('orientationchange', syncTouchAreas)
+      window.visualViewport?.removeEventListener('resize', syncTouchAreas)
+      void NativeMap.setTouchAreas({ areas: [] }).catch(() => undefined)
+    }
+  }, [
+    activeTab,
+    facilities.isPending,
+    facilities.isSuccess,
+    hasLocationError,
+    isHomeInitialLoading,
+    isNativePlatform,
+    isRunningSessionActive,
+    nativeMapMessage,
+    recordMemoFilter,
+    recordMonthFilter,
+    recordSortKey,
+    runRecords.length,
+    running.status,
+    selectedRecordId,
+    status,
+    visibleFacilities.length,
+    visibleRunRecords.length,
+    visibleTypes,
+  ])
 
   const toggleFacilityType = (type: FacilityType) => {
     setVisibleTypes((current) =>
