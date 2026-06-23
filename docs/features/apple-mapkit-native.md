@@ -183,6 +183,7 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 
 - `NativeMapPlugin.swift`를 추가해 React에서 `NativeMap.open(...)`을 호출할 수 있게 했다.
 - `NativeMapViewController.swift`를 추가해 Swift `MKMapView` 전체 화면을 present한다.
+- `MainViewController.swift`에서 `CAPBridgeViewController.capacitorDidLoad()` 시점에 `NativeMapPlugin`을 명시 등록한다.
 - 네이티브 지도 화면은 현재 위치 표시, 닫기 버튼, 음수대/화장실 annotation을 제공한다.
 - React 홈 화면에는 iOS native platform에서만 보이는 `iPhone 지도 열기` 버튼을 추가했다.
 - React는 현재 표시 중인 시설을 최대 300개까지만 native 화면으로 넘긴다.
