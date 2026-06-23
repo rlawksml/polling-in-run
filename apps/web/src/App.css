@@ -215,7 +215,7 @@ button {
 .home-brand-card {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 138px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 96px);
   right: 20px;
   display: inline-flex;
   width: max-content;
@@ -245,7 +245,7 @@ button {
 .facility-filter {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 138px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 96px);
   left: 20px;
   display: flex;
   gap: 8px;
@@ -296,7 +296,7 @@ button {
 .facility-status {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 190px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 148px);
   left: 20px;
   padding: 7px 10px;
   border-radius: 999px;
@@ -310,7 +310,7 @@ button {
 .native-map-controls {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 190px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 148px);
   right: 20px;
   display: grid;
   gap: 8px;
