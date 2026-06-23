@@ -571,7 +571,17 @@ function App() {
     running.reset()
   }
 
+  const dismissFocusedControl = () => {
+    const activeElement = document.activeElement
+
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur()
+    }
+  }
+
   const saveRunningRecord = () => {
+    dismissFocusedControl()
+
     try {
       const record = {
         distanceM: Math.round(running.distanceM),
@@ -1227,6 +1237,8 @@ function App() {
               type="button"
               className="result-close-button"
               aria-label="러닝 결과 닫기"
+              onPointerDown={dismissFocusedControl}
+              onTouchStart={dismissFocusedControl}
               onClick={resetRunningResult}
             >
               ×
@@ -1323,10 +1335,22 @@ function App() {
             )}
             {running.status === 'finished' && (
               <>
-                <Button type="button" className="secondary-action" onClick={resetRunningResult}>
+                <Button
+                  type="button"
+                  className="secondary-action"
+                  onPointerDown={dismissFocusedControl}
+                  onTouchStart={dismissFocusedControl}
+                  onClick={resetRunningResult}
+                >
                   홈으로
                 </Button>
-                <Button type="button" className="primary-action" onClick={saveRunningRecord}>
+                <Button
+                  type="button"
+                  className="primary-action"
+                  onPointerDown={dismissFocusedControl}
+                  onTouchStart={dismissFocusedControl}
+                  onClick={saveRunningRecord}
+                >
                   기록 저장
                 </Button>
               </>
