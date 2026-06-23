@@ -47,8 +47,8 @@
 
 ## 다음 작업
 
-- Xcode에서 `NativeMap` Capacitor plugin 파일을 안전하게 추가한다.
-- Swift `NativeMapViewController`에서 `MKMapView`와 annotation 표시를 검증한다.
+- iPhone 실기기에서 `NativeMap` Capacitor plugin을 열어 현재 위치와 시설 annotation 표시를 검증한다.
+- Swift `NativeMapViewController`의 annotation 상세, 색상, clustering 필요 여부를 확인한다.
 - native bridge가 과하면 단기적으로 외부 지도 앱 연동과 시설 리스트/카드 중심 UX를 유지한다.
 - 시설 데이터 local-first JSON 구조는 완료했으므로 지도 제공자가 바뀌어도 마커 데이터 모델은 유지한다.
 

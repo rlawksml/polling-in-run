@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Capacitor } from '@capacitor/core'
 import { extent, line, max, scaleBand, scaleLinear } from 'd3'
 import { useState } from 'react'
 import {
@@ -18,6 +19,7 @@ import {
   useRunningSession,
 } from './hooks/use-running-session'
 import './App.css'
+import { NativeMap, type NativeMapFacility } from './lib/native-map'
 
 const locationMessages = {
   idle: '현재 위치를 준비하고 있어요.',
@@ -31,6 +33,7 @@ const locationMessages = {
 
 const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
+const NATIVE_MAP_FACILITY_LIMIT = 300
 const DEFAULT_RUN_GOALS = {
   monthlyDistanceKm: 40,
   weeklyDistanceKm: 10,
@@ -294,6 +297,7 @@ function App() {
   const { location, requestLocation, status } = useCurrentLocation()
   const running = useRunningSession()
   const [mapBounds, setMapBounds] = useState<FacilityBounds | null>(null)
+  const [nativeMapMessage, setNativeMapMessage] = useState<string | null>(null)
   const [runMemo, setRunMemo] = useState('')
   const [recordSaveMessage, setRecordSaveMessage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<AppTab>('home')
@@ -340,6 +344,7 @@ function App() {
   const visibleFacilities = (facilities.data ?? []).filter((facility) =>
     visibleTypes.includes(facility.type),
   )
+  const canOpenNativeMap = Capacitor.isNativePlatform() && location !== null
   const isRunningSessionActive = running.status !== 'idle'
   const recordMonthOptions = getRecordMonthOptions(runRecords)
   const visibleRunRecords = getVisibleRecords(
@@ -491,6 +496,41 @@ function App() {
     setRunGoals(nextGoals)
   }
 
+  const openNativeMap = async () => {
+    if (!location) {
+      setNativeMapMessage('현재 위치를 확인한 뒤 네이티브 지도를 열 수 있어요.')
+      return
+    }
+
+    const nativeFacilities: NativeMapFacility[] = visibleFacilities
+      .slice(0, NATIVE_MAP_FACILITY_LIMIT)
+      .map(({ address, id, latitude, longitude, name, type }) => ({
+        address,
+        id,
+        latitude,
+        longitude,
+        name,
+        type,
+      }))
+
+    try {
+      await NativeMap.open({
+        center: {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        },
+        facilities: nativeFacilities,
+      })
+      setNativeMapMessage(null)
+    } catch (error) {
+      setNativeMapMessage(
+        error instanceof Error
+          ? error.message
+          : '네이티브 지도를 열지 못했어요.',
+      )
+    }
+  }
+
   return (
     <main className="app-shell">
       <KakaoMap
@@ -552,6 +592,18 @@ function App() {
           {facilities.isSuccess && `현재 영역 시설 ${visibleFacilities.length}곳 표시 중`}
           {facilities.isError && '시설 정보를 불러오지 못했어요'}
         </div>
+      )}
+
+      {!isRunningSessionActive && activeTab === 'home' && canOpenNativeMap && (
+        <section className="native-map-entry" aria-label="네이티브 지도 열기">
+          <Button type="button" onClick={openNativeMap}>
+            iPhone 지도 열기
+          </Button>
+          <span>
+            현재 표시 중인 시설 최대 {NATIVE_MAP_FACILITY_LIMIT}곳을 Apple MapKit으로 확인해요.
+          </span>
+          {nativeMapMessage && <small role="status">{nativeMapMessage}</small>}
+        </section>
       )}
 
       {!isRunningSessionActive && activeTab === 'home' && (

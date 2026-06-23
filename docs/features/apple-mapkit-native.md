@@ -179,10 +179,19 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 - 시설 데이터는 `facilities.json`에서 필터링한 결과만 native로 넘긴다.
 - 내장 길찾기는 보류하고 외부 지도 앱 연동을 유지한다.
 
+## 구현 상태
+
+- `NativeMapPlugin.swift`를 추가해 React에서 `NativeMap.open(...)`을 호출할 수 있게 했다.
+- `NativeMapViewController.swift`를 추가해 Swift `MKMapView` 전체 화면을 present한다.
+- 네이티브 지도 화면은 현재 위치 표시, 닫기 버튼, 음수대/화장실 annotation을 제공한다.
+- React 홈 화면에는 iOS native platform에서만 보이는 `iPhone 지도 열기` 버튼을 추가했다.
+- React는 현재 표시 중인 시설을 최대 300개까지만 native 화면으로 넘긴다.
+- Xcode simulator build 기준으로 Swift 컴파일과 앱 빌드를 통과했다.
+
 ## 남은 확인
 
-- Xcode에서 Capacitor plugin 파일을 프로젝트에 안전하게 추가하는 방법
-- Swift 화면 present 방식
-- annotation clustering 필요 여부
-- native 화면과 React 화면 간 닫기/선택 이벤트 전달 필요 여부
-- 실제 iPhone에서 로컬 JSON 필터링 후 native 전달 성능
+- 실제 iPhone에서 `iPhone 지도 열기` 버튼이 노출되고 native 화면이 열리는지 확인한다.
+- 위치 권한 허용 후 현재 위치 표시가 자연스러운지 확인한다.
+- annotation 개수가 많을 때 실기기 성능이 괜찮은지 확인하고 clustering 필요 여부를 결정한다.
+- annotation 선택 후 외부 Apple Maps 길찾기 연결이 필요한지 결정한다.
+- native 화면과 React 화면 간 닫기/선택 이벤트 전달 필요 여부를 판단한다.
