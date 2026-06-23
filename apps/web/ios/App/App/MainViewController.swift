@@ -1,6 +1,19 @@
 import Capacitor
 import MapKit
 import UIKit
+import WebKit
+
+final class PassthroughWebView: WKWebView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hitView = super.hitTest(point, with: event)
+
+        if hitView === self || hitView === scrollView {
+            return nil
+        }
+
+        return hitView
+    }
+}
 
 final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
     private let embeddedMapView = MKMapView()
@@ -60,6 +73,10 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
             webView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
             webView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor)
         ])
+    }
+
+    override func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
+        PassthroughWebView(frame: frame, configuration: configuration)
     }
 
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {

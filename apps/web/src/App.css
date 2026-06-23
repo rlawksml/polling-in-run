@@ -22,6 +22,29 @@ button {
   background: transparent;
 }
 
+.app-shell.is-native-map {
+  pointer-events: none;
+}
+
+.app-shell.is-native-map button,
+.app-shell.is-native-map a,
+.app-shell.is-native-map input,
+.app-shell.is-native-map select,
+.app-shell.is-native-map textarea,
+.app-shell.is-native-map .top-bar,
+.app-shell.is-native-map .facility-filter,
+.app-shell.is-native-map .facility-status,
+.app-shell.is-native-map .native-map-status,
+.app-shell.is-native-map .app-loading-card,
+.app-shell.is-native-map .location-card,
+.app-shell.is-native-map .start-button,
+.app-shell.is-native-map .bottom-nav,
+.app-shell.is-native-map .running-panel,
+.app-shell.is-native-map .records-panel,
+.app-shell.is-native-map .my-panel {
+  pointer-events: auto;
+}
+
 .map-area,
 .map-canvas {
   position: absolute;
