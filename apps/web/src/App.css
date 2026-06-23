@@ -215,7 +215,7 @@ button {
 .home-brand-card {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 96px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
   right: 20px;
   display: inline-flex;
   width: max-content;
@@ -245,7 +245,7 @@ button {
 .facility-filter {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 96px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
   left: 20px;
   display: flex;
   gap: 8px;
@@ -296,7 +296,7 @@ button {
 .facility-status {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 148px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 106px);
   left: 20px;
   padding: 7px 10px;
   border-radius: 999px;
@@ -310,7 +310,7 @@ button {
 .native-map-controls {
   position: absolute;
   z-index: 2;
-  top: calc(max(18px, env(safe-area-inset-top)) + 148px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 106px);
   right: 20px;
   display: grid;
   gap: 8px;
@@ -521,29 +521,49 @@ button {
 .running-panel {
   position: absolute;
   z-index: 4;
-  right: 16px;
-  bottom: calc(18px + env(safe-area-inset-bottom));
-  left: 16px;
+  right: 20px;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  left: 20px;
+  box-sizing: border-box;
+  max-width: calc(100% - 40px);
   display: grid;
-  gap: 20px;
-  padding: 20px;
+  gap: 12px;
+  padding: 14px;
   border: 1px solid rgba(16, 24, 40, 0.1);
-  border-radius: 26px;
+  border-radius: 22px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 22px 60px rgba(16, 24, 40, 0.22);
+  box-shadow: 0 18px 44px rgba(16, 24, 40, 0.18);
   backdrop-filter: blur(16px);
 }
 
 .running-panel.is-result {
+  right: 16px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  left: 16px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100dvh - 36px - env(safe-area-inset-bottom));
   gap: 16px;
+  overflow: auto;
+  padding: 20px;
+  border-radius: 26px;
+  box-shadow: 0 22px 60px rgba(16, 24, 40, 0.22);
+}
+
+.running-panel.is-result > div:first-of-type {
+  padding-right: 42px;
 }
 
 .running-eyebrow {
-  margin: 0 0 6px;
+  margin: 0;
   color: #2563eb;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.12em;
+}
+
+.running-panel.is-result .running-eyebrow {
+  margin-bottom: 6px;
+  font-size: 0.72rem;
 }
 
 .running-panel h1 {
@@ -555,40 +575,91 @@ button {
 
 .running-metrics {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin: 0;
 }
 
 .running-metrics div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.running-metrics dt {
+  min-width: 0;
+  overflow: hidden;
+  color: #667085;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.running-metrics dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #101828;
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.running-panel.is-result .running-metrics {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.running-panel.is-result .running-metrics div {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   padding: 14px;
   border-radius: 16px;
-  background: #f8fafc;
 }
 
-.running-metrics dt {
-  color: #667085;
+.running-panel.is-result .running-metrics dt {
   font-size: 0.78rem;
-  font-weight: 800;
 }
 
-.running-metrics dd {
-  margin: 0;
-  color: #101828;
+.running-panel.is-result .running-metrics dd {
   font-size: 1.35rem;
-  font-weight: 950;
-  letter-spacing: -0.045em;
 }
 
 .running-note {
+  display: none;
   margin: 0;
   color: #667085;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.running-panel.is-result .running-note {
+  display: block;
   font-size: 0.78rem;
   line-height: 1.5;
+}
+
+.result-close-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 1.25rem;
+  font-weight: 900;
 }
 
 .running-warning {
@@ -647,6 +718,7 @@ button {
   background: #ffffff;
   color: #101828;
   font: inherit;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.45;
 }
@@ -1358,15 +1430,22 @@ button {
 
 .running-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .running-actions button {
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.running-panel.is-result .running-actions button {
   min-height: 52px;
   border-radius: 16px;
   font-size: 0.92rem;
-  font-weight: 900;
 }
 
 .running-actions .primary-action {

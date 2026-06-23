@@ -1222,17 +1222,23 @@ function App() {
           className={`running-panel ${running.status === 'finished' ? 'is-result' : ''}`}
           aria-label={running.status === 'finished' ? '러닝 결과' : '러닝 진행'}
         >
+          {running.status === 'finished' && (
+            <Button
+              type="button"
+              className="result-close-button"
+              aria-label="러닝 결과 닫기"
+              onClick={resetRunningResult}
+            >
+              ×
+            </Button>
+          )}
           <div>
             <p className="running-eyebrow">
               {running.status === 'running' && '러닝 진행 중'}
               {running.status === 'paused' && '러닝 일시정지'}
               {running.status === 'finished' && '러닝 완료'}
             </p>
-            <h1>
-              {running.status === 'finished'
-                ? '러닝 결과를 확인해요.'
-                : '호흡을 편하게 유지해요.'}
-            </h1>
+            {running.status === 'finished' && <h1>러닝 결과를 확인해요.</h1>}
           </div>
 
           <dl className="running-metrics">
