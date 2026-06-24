@@ -13,7 +13,7 @@
 | M2. 주변 편의시설 | 12 / 12 | 실제 시설 데이터, 지도 영역 기반 조회, 상세 카드, 길찾기, 클러스터링 완료 |
 | M3. 러닝 기록 | 5 / 5 | 러닝 상태, 위치 추적, 거리·페이스, 결과 확인, 로컬 기록 저장·조회 완료 |
 | M4. 마이 페이지와 로컬 사용자 정보 | 6 / 6 | 로그인 기능은 추후 확장으로 축소, 로컬 프로필·러닝 대시보드·설정 안내 구현 완료 |
-| M5. Local-first iPhone 프로토타입 | 7.8 / 8 | Capacitor 설정 완료, 홈 화면 Apple MapKit 대체, 터치 전달, 현위치 이동 버튼 구현 |
+| M5. Local-first iPhone 프로토타입 | 7.9 / 8 | Capacitor 설정 완료, Apple MapKit 대체, 로딩 UX, 현위치 이동, 단일 마이 페이지 보강 |
 | 기반 작업 | 6 / 6 | React, FastAPI, 테스트, shadcn/ui + Tailwind 기반 완료 |
 
 현재 앱은 카카오맵에서 실제 서울 공원 음수대와 실제 서울 공중화장실을 표시하며, 위치 권한을
@@ -24,7 +24,7 @@
 
 1. iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도 드래그·확대/축소, 현위치 이동, 시설 마커 터치를 확인한다.
 2. 기록 페이지 확장 기능의 실제 사용감을 확인하고 필터·정렬·경로 미리보기 표현을 다듬는다.
-3. 시설 JSON 크기와 로딩 성능을 iPhone에서 확인하고 필요하면 압축·분할 전략을 검토한다.
+3. 시설 JSON 로딩 체감을 iPhone에서 확인하고 필요하면 압축·분할 전략을 검토한다.
 
 ### 작업 방식
 
@@ -204,6 +204,7 @@ MVP 제외:
 - Capacitor 앱 안에서는 Vite dev proxy가 없으므로 `/api` 상대 경로만으로 FastAPI에 접근할 수 없다.
 - 카카오맵 SDK는 허용 도메인/origin 설정의 영향을 받으며, Capacitor 정적 앱의 `capacitor://localhost`에서는 안정적이지 않다.
 - 시설 데이터는 `apps/web/public/data/facilities.json`에 정규화된 JSON으로 생성하며, 프론트는 이 파일을 먼저 조회한다.
+- 시설 JSON은 약 5.2MB, gzip 기준 약 389KB이며 로컬 Node 기준 평균 파싱 시간은 약 8.7ms다.
 - `NativeMap`은 React가 현재 위치와 표시 중인 시설 최대 300개를 Swift embedded `MKMapView`에 동기화하는 구조로 시작했다.
 - `NativeMap.setTouchAreas(...)`는 React UI의 버튼·카드 좌표를 Swift에 넘겨, 그 외 영역의 드래그와 핀치 줌을 native map이 받을 수 있게 한다.
 - 실기기 실행에는 Xcode 설정, 개발자 계정 로그인, iPhone 신뢰 설정이 필요할 수 있다.

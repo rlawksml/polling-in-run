@@ -92,6 +92,57 @@ describe('App', () => {
     vi.restoreAllMocks()
   })
 
+  it('shows a full loading screen while the app is preparing location', () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () => new Promise<Response>(() => undefined),
+    )
+    const getCurrentPosition = vi.fn()
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition },
+    })
+
+    renderApp()
+
+    expect(screen.getByLabelText('앱 로딩 화면')).toHaveTextContent(
+      '달릴 준비를 하고 있어요.',
+    )
+  })
+
+  it('shows a map data skeleton while facilities are loading', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () => new Promise<Response>(() => undefined),
+    )
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 12.4,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: Date.now(),
+        toJSON: () => ({}),
+      })
+    })
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition },
+    })
+
+    renderApp()
+
+    expect(await screen.findByLabelText('지도 데이터 로딩 상태')).toHaveTextContent(
+      '주변 시설을 불러오고 있어요.',
+    )
+  })
+
   it('shows the current location and running actions', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(localFacilityPayload), { status: 200 }),

@@ -36,7 +36,8 @@ button {
 .app-shell.is-native-map .facility-status,
 .app-shell.is-native-map .native-map-controls,
 .app-shell.is-native-map .native-map-status,
-.app-shell.is-native-map .app-loading-card,
+.app-shell.is-native-map .app-loading-screen,
+.app-shell.is-native-map .map-loading-skeleton,
 .app-shell.is-native-map .location-card,
 .app-shell.is-native-map .start-button,
 .app-shell.is-native-map .bottom-nav,
@@ -140,40 +141,58 @@ button {
   backdrop-filter: blur(10px);
 }
 
-.app-loading-card {
+.app-loading-screen {
   position: absolute;
-  z-index: 4;
-  top: 202px;
-  left: 20px;
+  z-index: 8;
+  inset: 0;
   display: grid;
-  width: min(74%, 320px);
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(37, 99, 235, 0.14);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.14);
-  backdrop-filter: blur(12px);
+  align-content: center;
+  gap: 22px;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(37, 99, 235, 0.18), transparent 34%),
+    linear-gradient(180deg, #f8fafc 0%, #e8f0fb 100%);
+  color: #101828;
 }
 
-.app-loading-card p,
-.app-loading-card strong,
-.app-loading-card span {
+.app-loading-logo {
+  justify-self: center;
+  padding: 10px 14px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.12);
+}
+
+.app-loading-copy {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.app-loading-screen p,
+.app-loading-screen h1,
+.app-loading-screen span,
+.map-loading-skeleton p,
+.map-loading-skeleton strong {
   margin: 0;
 }
 
-.app-loading-card strong {
-  display: block;
-  margin-bottom: 4px;
+.app-loading-screen h1 {
   color: #101828;
-  font-size: 0.88rem;
+  font-size: 1.55rem;
   font-weight: 950;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.055em;
 }
 
-.app-loading-card span {
+.app-loading-screen span {
   color: #667085;
-  font-size: 0.74rem;
+  font-size: 0.86rem;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -193,6 +212,11 @@ button {
   background: rgba(37, 99, 235, 0.12);
 }
 
+.app-loading-screen .loading-bar {
+  width: min(72%, 280px);
+  justify-self: center;
+}
+
 .loading-bar span {
   position: absolute;
   inset: 0;
@@ -209,6 +233,65 @@ button {
 
   100% {
     transform: translateX(250%);
+  }
+}
+
+.map-loading-skeleton {
+  position: absolute;
+  z-index: 3;
+  top: 202px;
+  left: 20px;
+  display: grid;
+  width: min(74%, 320px);
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.map-loading-skeleton strong {
+  color: #101828;
+  font-size: 0.86rem;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.skeleton-row {
+  position: relative;
+  overflow: hidden;
+  width: 64%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e4e7ec;
+}
+
+.skeleton-row.is-wide {
+  width: 100%;
+}
+
+.skeleton-row::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.75),
+    transparent
+  );
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
   }
 }
 
@@ -977,7 +1060,7 @@ button {
   z-index: 3;
   top: 0;
   right: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom));
+  bottom: 0;
   left: 0;
   display: grid;
   align-content: start;
@@ -986,7 +1069,7 @@ button {
   padding:
     calc(max(18px, env(safe-area-inset-top)) + 20px)
     20px
-    24px;
+    calc(104px + env(safe-area-inset-bottom));
   overflow: auto;
   border: 0;
   border-radius: 0;
@@ -1469,7 +1552,7 @@ button {
 
 .bottom-nav {
   position: absolute;
-  z-index: 2;
+  z-index: 6;
   right: 0;
   bottom: 0;
   left: 0;

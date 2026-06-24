@@ -40,7 +40,8 @@ const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
 const NATIVE_MAP_FACILITY_LIMIT = 300
 const NATIVE_TOUCH_AREA_SELECTORS = [
   '.home-brand-card',
-  '.app-loading-card',
+  '.app-loading-screen',
+  '.map-loading-skeleton',
   '.facility-filter',
   '.facility-status',
   '.native-map-controls',
@@ -387,11 +388,17 @@ function App() {
     [visibleFacilities],
   )
   const isRunningSessionActive = running.status !== 'idle'
-  const isHomeInitialLoading =
+  const isAppBootLoading =
     !isRunningSessionActive &&
     activeTab === 'home' &&
     !hasLocationError &&
-    (status === 'idle' || status === 'loading' || facilities.isPending)
+    (status === 'idle' || status === 'loading')
+  const isMapDataLoading =
+    !isRunningSessionActive &&
+    activeTab === 'home' &&
+    !hasLocationError &&
+    !isAppBootLoading &&
+    facilities.isPending
   const recordMonthOptions = getRecordMonthOptions(runRecords)
   const visibleRunRecords = getVisibleRecords(
     runRecords,
@@ -560,7 +567,8 @@ function App() {
     facilities.isPending,
     facilities.isSuccess,
     hasLocationError,
-    isHomeInitialLoading,
+    isAppBootLoading,
+    isMapDataLoading,
     isNativePlatform,
     isRunningSessionActive,
     nativeMapMessage,
@@ -742,20 +750,36 @@ function App() {
         </header>
       )}
 
-      {isHomeInitialLoading && (
+      {isAppBootLoading && (
         <section
-          className="app-loading-card"
-          aria-label="앱 초기 로딩 상태"
+          className="app-loading-screen"
+          aria-label="앱 로딩 화면"
           aria-live="polite"
         >
-          <div>
+          <div className="app-loading-logo">POLLING IN RUN</div>
+          <div className="app-loading-copy">
             <p className="loading-label">LOADING</p>
-            <strong>지도를 준비하고 있어요.</strong>
-            <span>현재 위치와 주변 시설 정보를 불러오는 중이에요.</span>
+            <h1>달릴 준비를 하고 있어요.</h1>
+            <span>현재 위치와 지도를 연결하는 중이에요.</span>
           </div>
           <div className="loading-bar" aria-hidden="true">
             <span />
           </div>
+        </section>
+      )}
+
+      {isMapDataLoading && (
+        <section
+          className="map-loading-skeleton"
+          aria-label="지도 데이터 로딩 상태"
+          aria-live="polite"
+        >
+          <div>
+            <p className="loading-label">MAP DATA</p>
+            <strong>주변 시설을 불러오고 있어요.</strong>
+          </div>
+          <div className="skeleton-row is-wide" aria-hidden="true" />
+          <div className="skeleton-row" aria-hidden="true" />
         </section>
       )}
 
