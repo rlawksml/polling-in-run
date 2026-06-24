@@ -720,6 +720,6 @@ describe('App', () => {
     expect(screen.queryByText('지도 전략')).not.toBeInTheDocument()
     expect(screen.queryByText('시설 데이터')).not.toBeInTheDocument()
     expect(screen.getByText('로그인')).toBeInTheDocument()
-    expect(screen.getByText('기능 개발중')).toBeInTheDocument()
+    expect(screen.getByText('개발 예정')).toBeInTheDocument()
   })
 })

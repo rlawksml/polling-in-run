@@ -1393,7 +1393,7 @@ function App() {
               </div>
               <span className="settings-badge is-muted">
                 <span aria-hidden="true" className="settings-badge-icon">⚙</span>
-                기능 개발중
+                개발 예정
               </span>
             </article>
           </section>
