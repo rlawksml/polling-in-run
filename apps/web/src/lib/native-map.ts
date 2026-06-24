@@ -13,6 +13,18 @@ export type NativeMapTouchArea = {
   y: number
 }
 
+export type NativeMapRoutePoint = {
+  latitude: number
+  longitude: number
+}
+
+export type NativeMapFrame = {
+  height: number
+  width: number
+  x: number
+  y: number
+}
+
 type NativeMapPlugin = {
   open(options: {
     center: {
@@ -29,6 +41,11 @@ type NativeMapPlugin = {
   }): Promise<void>
   setTouchAreas(options: {
     areas: NativeMapTouchArea[]
+  }): Promise<void>
+  showRoutePreview(options: {
+    distanceM: number
+    frame: NativeMapFrame | null
+    points: NativeMapRoutePoint[]
   }): Promise<void>
   sync(options: {
     center: {

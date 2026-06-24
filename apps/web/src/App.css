@@ -1032,6 +1032,21 @@ button {
     #eef3ec;
 }
 
+.native-route-preview-map {
+  display: grid;
+  min-height: 132px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.native-route-preview-map span {
+  color: #d0d5dd;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .record-route-preview .route-map-park {
   fill: rgba(134, 197, 112, 0.34);
 }

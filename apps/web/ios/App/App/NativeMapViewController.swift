@@ -31,6 +31,27 @@ final class FacilityAnnotation: NSObject, MKAnnotation {
     }
 }
 
+final class RoutePointAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    let kind: String
+
+    var title: String? {
+        switch kind {
+        case "start":
+            return "출발"
+        case "end":
+            return "도착"
+        default:
+            return "이동 없이 머문 기록"
+        }
+    }
+
+    init(coordinate: CLLocationCoordinate2D, kind: String) {
+        self.coordinate = coordinate
+        self.kind = kind
+    }
+}
+
 final class NativeMapViewController: UIViewController, MKMapViewDelegate {
     private let mapView = MKMapView()
     private let center: CLLocationCoordinate2D

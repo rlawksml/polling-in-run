@@ -22,6 +22,7 @@ final class PassthroughWebView: WKWebView {
 
 final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
     private let embeddedMapView = MKMapView()
+    private var routePreviewMapView: MKMapView?
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
@@ -53,6 +54,58 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
 
     func updateNativeTouchAreas(_ areas: [CGRect]) {
         (webView as? PassthroughWebView)?.interactiveRects = areas
+    }
+
+    func updateRoutePreview(
+        frame: CGRect?,
+        points: [CLLocationCoordinate2D],
+        distanceM: Double
+    ) {
+        guard let frame = frame, frame.width > 0, frame.height > 0, !points.isEmpty else {
+            removeRoutePreview()
+            return
+        }
+
+        let mapView = routePreviewMapView ?? makeRoutePreviewMapView()
+        routePreviewMapView = mapView
+        mapView.frame = frame
+
+        if mapView.superview == nil {
+            view.addSubview(mapView)
+        }
+
+        mapView.removeOverlays(mapView.overlays)
+        mapView.removeAnnotations(mapView.annotations)
+
+        let firstPoint = points[0]
+        let lastPoint = points[points.count - 1]
+        let isStationary = distanceM <= 0 || points.count < 2 || firstPoint.distance(to: lastPoint) < 5
+
+        if isStationary {
+            let annotation = RoutePointAnnotation(coordinate: firstPoint, kind: "stationary")
+            mapView.addAnnotation(annotation)
+            mapView.setRegion(
+                MKCoordinateRegion(
+                    center: firstPoint,
+                    latitudinalMeters: 220,
+                    longitudinalMeters: 220
+                ),
+                animated: false
+            )
+            return
+        }
+
+        let polyline = MKPolyline(coordinates: points, count: points.count)
+        mapView.addOverlay(polyline)
+        mapView.addAnnotations([
+            RoutePointAnnotation(coordinate: firstPoint, kind: "start"),
+            RoutePointAnnotation(coordinate: lastPoint, kind: "end")
+        ])
+        mapView.setVisibleMapRect(
+            polyline.boundingMapRect,
+            edgePadding: UIEdgeInsets(top: 26, left: 26, bottom: 26, right: 26),
+            animated: false
+        )
     }
 
     private func installEmbeddedMap() {
@@ -88,11 +141,55 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
         ])
     }
 
+    private func makeRoutePreviewMapView() -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = self
+        mapView.isUserInteractionEnabled = false
+        mapView.showsUserLocation = false
+        mapView.layer.cornerRadius = 14
+        mapView.layer.masksToBounds = true
+        mapView.mapType = .standard
+        return mapView
+    }
+
+    private func removeRoutePreview() {
+        routePreviewMapView?.removeFromSuperview()
+        routePreviewMapView = nil
+    }
+
     override func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
         PassthroughWebView(frame: frame, configuration: configuration)
     }
 
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if let routePointAnnotation = annotation as? RoutePointAnnotation {
+            let identifier = "RoutePointAnnotation"
+            let annotationView = mapView.dequeueReusableAnnotationView(
+                withIdentifier: identifier
+            ) as? MKMarkerAnnotationView ?? MKMarkerAnnotationView(
+                annotation: annotation,
+                reuseIdentifier: identifier
+            )
+
+            annotationView.annotation = annotation
+            annotationView.canShowCallout = false
+            annotationView.clusteringIdentifier = nil
+
+            switch routePointAnnotation.kind {
+            case "start":
+                annotationView.markerTintColor = UIColor.systemGreen
+                annotationView.glyphText = "출"
+            case "end":
+                annotationView.markerTintColor = UIColor.systemOrange
+                annotationView.glyphText = "도"
+            default:
+                annotationView.markerTintColor = UIColor.systemBlue
+                annotationView.glyphText = "•"
+            }
+
+            return annotationView
+        }
+
         guard let facilityAnnotation = annotation as? FacilityAnnotation else {
             return nil
         }
@@ -114,5 +211,27 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
         annotationView.glyphText = facilityAnnotation.facility.type == "water" ? "물" : "WC"
 
         return annotationView
+    }
+
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        guard let polyline = overlay as? MKPolyline else {
+            return MKOverlayRenderer(overlay: overlay)
+        }
+
+        let renderer = MKPolylineRenderer(polyline: polyline)
+        renderer.strokeColor = UIColor.systemBlue
+        renderer.lineWidth = 5
+        renderer.lineCap = .round
+        renderer.lineJoin = .round
+
+        return renderer
+    }
+}
+
+private extension CLLocationCoordinate2D {
+    func distance(to coordinate: CLLocationCoordinate2D) -> CLLocationDistance {
+        CLLocation(latitude: latitude, longitude: longitude).distance(
+            from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        )
     }
 }
