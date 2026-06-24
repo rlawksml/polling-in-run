@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -90,6 +91,7 @@ describe('App', () => {
     cleanup()
     window.localStorage.clear()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('shows a full loading screen while the app is preparing location', () => {
@@ -111,6 +113,7 @@ describe('App', () => {
   })
 
   it('shows a map data skeleton while facilities are loading', async () => {
+    vi.useFakeTimers()
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       () => new Promise<Response>(() => undefined),
     )
@@ -138,7 +141,14 @@ describe('App', () => {
 
     renderApp()
 
-    expect(await screen.findByLabelText('지도 데이터 로딩 상태')).toHaveTextContent(
+    expect(screen.getByLabelText('앱 로딩 화면')).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+      await Promise.resolve()
+    })
+
+    expect(screen.getByLabelText('지도 데이터 로딩 상태')).toHaveTextContent(
       '주변 시설을 불러오고 있어요.',
     )
   })
@@ -338,6 +348,74 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
 
     expect(screen.getByText(/0km 러닝은 기록으로 저장하지 않아요/)).toBeInTheDocument()
+    expect(window.localStorage.getItem('polling-in-run.records.v1')).toBeNull()
+  })
+
+  it('blocks running records without a memo', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
+    )
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 1000,
+        toJSON: () => ({}),
+      })
+    })
+    const watchPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 1000,
+        toJSON: () => ({}),
+      })
+      success({
+        coords: {
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5675,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 2000,
+        toJSON: () => ({}),
+      })
+
+      return 24
+    })
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: { clearWatch: vi.fn(), getCurrentPosition, watchPosition },
+    })
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '러닝 시작' }))
+    fireEvent.click(screen.getByRole('button', { name: '종료' }))
+    fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
+
+    expect(screen.getByText(/러닝 메모를 남겨야 기록으로 저장할 수 있어요/)).toBeInTheDocument()
     expect(window.localStorage.getItem('polling-in-run.records.v1')).toBeNull()
   })
 

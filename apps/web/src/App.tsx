@@ -37,6 +37,7 @@ const locationMessages = {
 
 const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
+const APP_BOOT_MIN_LOADING_MS = 2000
 const NATIVE_MAP_FACILITY_LIMIT = 300
 const NATIVE_TOUCH_AREA_SELECTORS = [
   '.home-brand-card',
@@ -321,6 +322,7 @@ function App() {
   const [nativeMapMessage, setNativeMapMessage] = useState<string | null>(null)
   const [runMemo, setRunMemo] = useState('')
   const [recordSaveMessage, setRecordSaveMessage] = useState<string | null>(null)
+  const [isBootSplashVisible, setIsBootSplashVisible] = useState(true)
   const [activeTab, setActiveTab] = useState<AppTab>('home')
   const [recordMemoFilter, setRecordMemoFilter] =
     useState<RecordMemoFilter>('all')
@@ -391,8 +393,8 @@ function App() {
   const isAppBootLoading =
     !isRunningSessionActive &&
     activeTab === 'home' &&
-    !hasLocationError &&
-    (status === 'idle' || status === 'loading')
+    (isBootSplashVisible ||
+      (!hasLocationError && (status === 'idle' || status === 'loading')))
   const isMapDataLoading =
     !isRunningSessionActive &&
     activeTab === 'home' &&
@@ -479,6 +481,14 @@ function App() {
   const selectedRoutePath = selectedRecord?.routePoints
     ? getRoutePathData(selectedRecord.routePoints)
     : null
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setIsBootSplashVisible(false)
+    }, APP_BOOT_MIN_LOADING_MS)
+
+    return () => window.clearTimeout(timerId)
+  }, [])
 
   useEffect(() => {
     document.documentElement.classList.toggle('is-native-map', isNativePlatform)
@@ -614,21 +624,25 @@ function App() {
       return
     }
 
+    const trimmedMemo = runMemo.trim()
+
+    if (trimmedMemo.length === 0) {
+      setRecordSaveMessage('러닝 메모를 남겨야 기록으로 저장할 수 있어요.')
+      return
+    }
+
     try {
-      const trimmedMemo = runMemo.trim()
       const record: RunRecord = {
         distanceM: Math.round(running.distanceM),
         elapsedMs: running.elapsedMs,
         id: `run-${Date.now()}`,
+        memo: trimmedMemo,
         pace: formatPace(running.elapsedMs, running.distanceM),
         routePoints: running.routePoints,
         routePointCount: running.routePointCount,
         savedAt: new Date().toISOString(),
       }
 
-      if (trimmedMemo.length > 0) {
-        record.memo = trimmedMemo
-      }
       const records = readRunRecords(RUN_RECORDS_STORAGE_KEY)
       const nextRecords = [record, ...records]
 
