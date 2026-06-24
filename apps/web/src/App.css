@@ -975,19 +975,23 @@ button {
 .my-panel {
   position: absolute;
   z-index: 3;
-  right: 16px;
-  bottom: calc(82px + env(safe-area-inset-bottom));
-  left: 16px;
+  top: 0;
+  right: 0;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  left: 0;
   display: grid;
-  max-height: 66vh;
+  align-content: start;
+  max-height: none;
   gap: 16px;
-  padding: 18px;
+  padding:
+    calc(max(18px, env(safe-area-inset-top)) + 20px)
+    20px
+    24px;
   overflow: auto;
-  border: 1px solid rgba(16, 24, 40, 0.1);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 22px 60px rgba(16, 24, 40, 0.2);
-  backdrop-filter: blur(16px);
+  border: 0;
+  border-radius: 0;
+  background: #f1f5f9;
+  box-shadow: none;
 }
 
 .my-panel h1,

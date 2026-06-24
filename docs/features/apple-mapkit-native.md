@@ -27,6 +27,9 @@ iOS Home
 ### 장점
 
 - 홈 화면에서 카카오맵 에러 대신 Apple 지도 자체를 볼 수 있다.
+- Kakao Maps JavaScript SDK가 Capacitor의 `capacitor://localhost` origin에서 도메인 검증 문제를 일으키는 상황을 피할 수 있다.
+- iPhone local-first 프로토타입에서는 별도 지도 API 키와 billing 설정 없이 iOS 기본 지도 기능을 먼저 검증할 수 있다.
+- 현재 위치, 지도 드래그, 핀치 줌, annotation 표시가 iOS 앱 환경과 자연스럽게 맞는다.
 - React 지도 영역과 Swift 지도 영역의 책임이 명확하다.
 - local-first JSON으로 이미 정규화된 시설 데이터를 그대로 넘길 수 있다.
 
@@ -34,6 +37,7 @@ iOS Home
 
 - WebView가 native map 위에 올라가므로 지도 드래그, 줌, annotation 터치 전달은 별도 처리가 필요하다.
 - React 상태와 native map 상태를 동기화하는 경계가 생긴다.
+- 웹과 iOS 앱에서 지도 구현이 갈라져 유지보수 비용이 늘어난다.
 
 ## 구현 단계
 
