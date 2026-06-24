@@ -717,10 +717,9 @@ describe('App', () => {
     expect(window.localStorage.getItem('polling-in-run.goals.v1')).toContain(
       '"weeklyDistanceKm":15',
     )
-    expect(screen.getByText('지도 전략')).toBeInTheDocument()
-    expect(screen.getByText('적용됨')).toBeInTheDocument()
-    expect(screen.getByText('시설 데이터')).toBeInTheDocument()
-    expect(screen.getByText('1차 완료')).toBeInTheDocument()
-    expect(screen.getByText('로그인과 동기화')).toBeInTheDocument()
+    expect(screen.queryByText('지도 전략')).not.toBeInTheDocument()
+    expect(screen.queryByText('시설 데이터')).not.toBeInTheDocument()
+    expect(screen.getByText('로그인')).toBeInTheDocument()
+    expect(screen.getByText('기능 개발중')).toBeInTheDocument()
   })
 })

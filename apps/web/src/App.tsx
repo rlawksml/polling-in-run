@@ -1385,29 +1385,15 @@ function App() {
             </div>
           </section>
 
-          <section className="settings-list" aria-label="앱 설정">
-            <article>
-              <div>
-                <strong>지도 전략</strong>
-                <span>iPhone 앱에서는 Apple MapKit native를 우선 사용해요. Kakao Maps는 웹 MVP에서 유지해요.</span>
-              </div>
-              <span className="settings-badge">적용됨</span>
-            </article>
-            <article>
-              <div>
-                <strong>시설 데이터</strong>
-                <span>음수대와 화장실 6,477건을 local-first JSON으로 번들링했고 성능을 1차 확인했어요.</span>
-              </div>
-              <span className="settings-badge">1차 완료</span>
-            </article>
+          <section className="settings-list" aria-label="계정 기능">
             <article className="is-planned">
               <div>
-                <strong>로그인과 동기화</strong>
-                <span>계정 기능은 여러 기기에서 기록을 공유해야 할 때 다시 연결해요.</span>
+                <strong>로그인</strong>
+                <span>계정과 여러 기기 동기화는 local-first 흐름을 검증한 뒤 다시 연결할 예정이에요.</span>
               </div>
               <span className="settings-badge is-muted">
                 <span aria-hidden="true" className="settings-badge-icon">⚙</span>
-                추후 개발
+                기능 개발중
               </span>
             </article>
           </section>
