@@ -178,10 +178,58 @@ describe('App', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
     )
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 1000,
+        toJSON: () => ({}),
+      })
+    })
+    const watchPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5665,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 1000,
+        toJSON: () => ({}),
+      })
+      success({
+        coords: {
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          latitude: 37.5675,
+          longitude: 126.978,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: 2000,
+        toJSON: () => ({}),
+      })
+
+      return 24
+    })
 
     Object.defineProperty(globalThis.navigator, 'geolocation', {
       configurable: true,
-      value: undefined,
+      value: { clearWatch: vi.fn(), getCurrentPosition, watchPosition },
     })
 
     renderApp()
@@ -189,8 +237,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '러닝 시작' }))
 
     expect(screen.getByText('러닝 진행 중')).toBeInTheDocument()
-    expect(screen.getByText('0.00 km')).toBeInTheDocument()
-    expect(screen.getByText('--')).toBeInTheDocument()
+    expect(screen.getByText('0.11 km')).toBeInTheDocument()
+    expect(screen.getByText('00:00 /km')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '일시정지' }))
     expect(screen.getByText('러닝 일시정지')).toBeInTheDocument()
@@ -210,20 +258,36 @@ describe('App', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
 
-    expect(screen.getByText(/기록을 이 iPhone 로컬 저장소에 저장했어요/)).toBeInTheDocument()
-    expect(window.localStorage.getItem('polling-in-run.records.v1')).toContain(
-      '가볍게 달린 날',
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: '홈으로' }))
-    expect(screen.getByRole('button', { name: '러닝 시작' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: '기록' }))
-
     expect(screen.getByText('저장한 러닝 기록')).toBeInTheDocument()
     expect(screen.getByLabelText('러닝 기록 상세')).toHaveTextContent(
       '가볍게 달린 날',
     )
+    expect(window.localStorage.getItem('polling-in-run.records.v1')).toContain(
+      '가볍게 달린 날',
+    )
+  })
+
+  it('blocks zero-distance running records', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(localFacilityPayload), { status: 200 }),
+    )
+
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      configurable: true,
+      value: undefined,
+    })
+
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: '러닝 시작' }))
+    fireEvent.click(screen.getByRole('button', { name: '종료' }))
+    fireEvent.change(screen.getByLabelText('러닝 메모'), {
+      target: { value: '움직이지 않은 기록' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '기록 저장' }))
+
+    expect(screen.getByText(/0km 러닝은 기록으로 저장하지 않아요/)).toBeInTheDocument()
+    expect(window.localStorage.getItem('polling-in-run.records.v1')).toBeNull()
   })
 
   it('opens and deletes a local running record without signing in', async () => {

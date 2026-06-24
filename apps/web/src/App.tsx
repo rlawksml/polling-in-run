@@ -65,7 +65,7 @@ type RunRecord = {
   distanceM: number
   elapsedMs: number
   id: string
-  memo: string
+  memo?: string
   pace: string
   routePoints?: RunLocationPoint[]
   routePointCount: number
@@ -248,7 +248,8 @@ function getVisibleRecords(
   sortKey: RecordSortKey,
 ) {
   const filteredRecords = records.filter((record) => {
-    const matchesMemo = memoFilter === 'all' || record.memo.trim().length > 0
+    const matchesMemo =
+      memoFilter === 'all' || (record.memo?.trim().length ?? 0) > 0
     const matchesMonth =
       monthFilter === 'all' || getRecordMonthKey(record) === monthFilter
 
@@ -600,16 +601,25 @@ function App() {
   const saveRunningRecord = () => {
     dismissFocusedControl()
 
+    if (Math.round(running.distanceM) <= 0) {
+      setRecordSaveMessage('0km 러닝은 기록으로 저장하지 않아요. 조금 이동한 뒤 다시 저장해주세요.')
+      return
+    }
+
     try {
-      const record = {
+      const trimmedMemo = runMemo.trim()
+      const record: RunRecord = {
         distanceM: Math.round(running.distanceM),
         elapsedMs: running.elapsedMs,
         id: `run-${Date.now()}`,
-        memo: runMemo.trim(),
         pace: formatPace(running.elapsedMs, running.distanceM),
         routePoints: running.routePoints,
         routePointCount: running.routePointCount,
         savedAt: new Date().toISOString(),
+      }
+
+      if (trimmedMemo.length > 0) {
+        record.memo = trimmedMemo
       }
       const records = readRunRecords(RUN_RECORDS_STORAGE_KEY)
       const nextRecords = [record, ...records]
@@ -620,7 +630,10 @@ function App() {
       )
       setRunRecords(nextRecords)
       setSelectedRecordId(record.id)
-      setRecordSaveMessage('기록을 이 iPhone 로컬 저장소에 저장했어요. 하단 기록 탭에서 다시 볼 수 있어요.')
+      setRunMemo('')
+      setRecordSaveMessage(null)
+      setActiveTab('records')
+      running.reset()
     } catch {
       setRecordSaveMessage('기록 저장에 실패했어요. 작성한 메모는 화면에 그대로 남아 있어요.')
     }
