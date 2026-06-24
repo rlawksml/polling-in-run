@@ -610,6 +610,9 @@ describe('App', () => {
       '"weeklyDistanceKm":15',
     )
     expect(screen.getByText('지도 전략')).toBeInTheDocument()
+    expect(screen.getByText('적용됨')).toBeInTheDocument()
+    expect(screen.getByText('시설 데이터')).toBeInTheDocument()
+    expect(screen.getByText('1차 완료')).toBeInTheDocument()
     expect(screen.getByText('로그인과 동기화')).toBeInTheDocument()
   })
 })

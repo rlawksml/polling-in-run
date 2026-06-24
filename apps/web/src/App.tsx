@@ -1260,16 +1260,16 @@ function App() {
             <article>
               <div>
                 <strong>지도 전략</strong>
-                <span>Apple MapKit, Google Maps, OSM/Leaflet 중 iPhone에 맞는 방식을 검토 중이에요.</span>
+                <span>iPhone 앱에서는 Apple MapKit native를 우선 사용해요. Kakao Maps는 웹 MVP에서 유지해요.</span>
               </div>
-              <span className="settings-badge">검토 중</span>
+              <span className="settings-badge">적용됨</span>
             </article>
             <article>
               <div>
                 <strong>시설 데이터</strong>
-                <span>음수대와 화장실 데이터를 앱 번들 JSON으로 가져가는 local-first 구조를 준비해요.</span>
+                <span>음수대와 화장실 6,477건을 local-first JSON으로 번들링했고 성능을 1차 확인했어요.</span>
               </div>
-              <span className="settings-badge">다음 작업</span>
+              <span className="settings-badge">1차 완료</span>
             </article>
             <article>
               <div>
