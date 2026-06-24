@@ -1400,12 +1400,15 @@ function App() {
               </div>
               <span className="settings-badge">1차 완료</span>
             </article>
-            <article>
+            <article className="is-planned">
               <div>
                 <strong>로그인과 동기화</strong>
                 <span>계정 기능은 여러 기기에서 기록을 공유해야 할 때 다시 연결해요.</span>
               </div>
-              <span className="settings-badge is-muted">추후 확장</span>
+              <span className="settings-badge is-muted">
+                <span aria-hidden="true" className="settings-badge-icon">⚙</span>
+                추후 개발
+              </span>
             </article>
           </section>
         </section>

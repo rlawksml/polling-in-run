@@ -1374,6 +1374,11 @@ button {
   padding: 14px;
 }
 
+.settings-list article.is-planned {
+  border-style: dashed;
+  background: #f9fafb;
+}
+
 .settings-list strong {
   display: block;
   margin-bottom: 4px;
@@ -1382,6 +1387,9 @@ button {
 }
 
 .settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 6px 8px;
   border-radius: 999px;
   background: #eff6ff;
@@ -1394,6 +1402,12 @@ button {
 .settings-badge.is-muted {
   background: #f2f4f7;
   color: #667085 !important;
+}
+
+.settings-badge-icon {
+  color: inherit !important;
+  font-size: 0.7rem !important;
+  line-height: 1;
 }
 
 .auth-mode-switch {
