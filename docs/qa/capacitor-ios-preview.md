@@ -53,13 +53,13 @@ VITE_API_BASE_URL=http://192.168.45.3:8000
 - [x] React UI의 버튼·카드 영역만 WebView가 터치받고 나머지는 embedded MapKit으로 넘기는 touch pass-through를 추가한다.
 - [x] 홈 화면 상단 MY 버튼을 제거하고 브랜드 문구를 Dynamic Island 아래 카드로 재배치한다.
 - [x] embedded Native MapKit을 현재 위치로 다시 이동시키는 홈 지도 컨트롤을 추가한다.
-- [ ] 현재 위치 권한 요청이 표시된다.
-- [ ] 현재 위치 마커가 표시된다.
-- [ ] 시설 API가 `VITE_API_BASE_URL`을 통해 호출된다.
-- [ ] 음수대와 화장실 마커 또는 클러스터가 표시된다.
-- [ ] 홈 화면의 embedded Native MapKit에서 현재 위치와 시설 annotation이 표시된다.
-- [ ] 홈 화면의 embedded Native MapKit에서 드래그와 확대/축소 제스처가 동작한다.
-- [ ] 홈 화면의 현위치 이동 버튼이 실제 iPhone에서 현재 좌표로 지도를 다시 이동시킨다.
+- [x] 현재 위치 권한 요청이 표시된다.
+- [x] 현재 위치 마커가 표시된다.
+- [x] 시설 데이터가 앱에서 빠르게 로딩된다.
+- [x] 음수대와 화장실 마커 또는 클러스터가 표시된다.
+- [x] 홈 화면의 embedded Native MapKit에서 현재 위치와 시설 annotation이 표시된다.
+- [x] 홈 화면의 embedded Native MapKit에서 드래그와 확대/축소 제스처가 동작한다.
+- [x] 홈 화면의 현위치 이동 버튼이 실제 iPhone에서 현재 좌표로 지도를 다시 이동시킨다.
 - [ ] 러닝 시작, 일시정지, 재개, 종료 흐름이 동작한다.
 - [ ] 러닝 결과 저장과 기록 조회가 동작한다.
 - [ ] local-first 기록 저장과 조회가 앱 환경에서 동작한다.
@@ -74,5 +74,14 @@ VITE_API_BASE_URL=http://192.168.45.3:8000
 ## 다음 결정
 
 - PWA 설치 경험과 Capacitor 앱 경험을 비교한다.
-- 홈 화면 embedded Apple MapKit의 실기기 표시와 touch pass-through 동작을 확인한다.
+- 홈 화면 embedded Apple MapKit의 실기기 표시, touch pass-through, 드래그·확대/축소, 현위치 이동을 확인했다.
 - 실제 앱 배포를 목표로 할 경우 App Store 서명, 개인정보 안내, 위치 권한 문구를 별도 정리한다.
+
+## 2026-06-24 iPhone 확인 결과
+
+- 위치가 정상 표시된다.
+- 현재 위치 마커가 표시된다.
+- 시설 마커가 표시된다.
+- Apple MapKit 드래그, 확대, 축소가 동작한다.
+- 현위치 이동 버튼이 동작한다.
+- 시설 JSON 데이터가 빠르게 표시된다.

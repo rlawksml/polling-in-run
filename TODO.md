@@ -9,11 +9,11 @@
 
 | 영역 | 진행 상태 | 현재 수준 |
 |---|---:|---|
-| M1. 지도와 현재 위치 | 9 / 10 | 카카오맵 웹 MVP 완료, iPhone 앱 지도 전략은 Apple MapKit native 우선 |
+| M1. 지도와 현재 위치 | 10 / 10 | 카카오맵 웹 MVP와 iPhone 실기기 위치 확인 완료, iPhone 앱 지도 전략은 Apple MapKit native 우선 |
 | M2. 주변 편의시설 | 12 / 12 | 실제 시설 데이터, 지도 영역 기반 조회, 상세 카드, 길찾기, 클러스터링 완료 |
 | M3. 러닝 기록 | 5 / 5 | 러닝 상태, 위치 추적, 거리·페이스, 결과 확인, 로컬 기록 저장·조회 완료 |
 | M4. 마이 페이지와 로컬 사용자 정보 | 6 / 6 | 로그인 기능은 추후 확장으로 축소, 로컬 프로필·러닝 대시보드·설정 안내 구현 완료 |
-| M5. Local-first iPhone 프로토타입 | 7.9 / 8 | Capacitor 설정 완료, Apple MapKit 대체, 로딩 UX, 현위치 이동, 단일 마이 페이지 보강 |
+| M5. Local-first iPhone 프로토타입 | 8 / 8 | Capacitor 설정, Apple MapKit 대체, 실기기 위치·시설·지도 조작·JSON 로딩 확인 완료 |
 | 기반 작업 | 6 / 6 | React, FastAPI, 테스트, shadcn/ui + Tailwind 기반 완료 |
 
 현재 앱은 카카오맵에서 실제 서울 공원 음수대와 실제 서울 공중화장실을 표시하며, 위치 권한을
@@ -22,9 +22,9 @@
 
 ### 바로 다음 작업
 
-1. iPhone 실기기 홈 화면에서 Apple MapKit 배경 지도 드래그·확대/축소, 현위치 이동, 시설 마커 터치를 확인한다.
-2. 기록 페이지 확장 기능의 실제 사용감을 확인하고 필터·정렬·경로 미리보기 표현을 다듬는다.
-3. 시설 JSON 로딩 체감을 iPhone에서 확인하고 필요하면 압축·분할 전략을 검토한다.
+1. 기록 페이지 확장 기능의 실제 사용감을 확인하고 필터·정렬·경로 미리보기 표현을 다듬는다.
+2. PWA 설치 경험과 Capacitor 앱 경험을 비교한다.
+3. 접근성·성능·배포 점검과 포트폴리오 회고를 준비한다.
 
 ### 작업 방식
 
@@ -45,14 +45,14 @@
 - [x] 현재 위치 권한 요청과 사용자 마커 구현
 - [x] 위치 로딩·거부·오류·미지원 상태 처리
 - [x] 현재 위치·시설 전체 보기·확대·축소 지도 컨트롤
-- [ ] 모바일 브라우저에서 실제 위치 확인
+- [x] 모바일 브라우저에서 실제 위치 확인
 - [x] iPhone 앱용 지도 전략 재선정
 
 현재 확인 사항:
 
 - `http://localhost:5173`과 `http://127.0.0.1:5173`의 SDK 요청과 실제 지도 렌더링을 확인했다.
 - 브라우저 위치 권한이 꺼진 상태에서는 위치 안내와 재시도 UI가 표시된다.
-- 모바일 브라우저 실기기 확인 절차는 [`모바일 실기기 검증`](./docs/qa/mobile-real-device-check.md)에 준비했다.
+- 모바일 브라우저와 iPhone 실기기에서 지도, 현재 위치, 시설 표시를 확인했다.
 - 스마트폰에서 내부 IP로 접속할 때는 해당 URL을 Kakao Developers Web 플랫폼 도메인에 임시 등록해야 한다.
 - Capacitor 정적 앱의 `capacitor://localhost` origin에서는 Kakao Maps JavaScript SDK가 Web 플랫폼 도메인 검증에 막힐 수 있다.
 
@@ -181,7 +181,7 @@ MVP 제외:
 
 - 마커 클러스터링과 러닝 시작·일시정지·종료 흐름이 안정화된 뒤 진행한다. 클러스터링은 완료했다.
 - 거리와 시간 계산, 러닝 결과 저장 초안이 있어야 아이폰 실기기 테스트의 의미가 커진다.
-- Capacitor 설정과 iOS 플랫폼 추가를 시작했다. 실기기 검증은 아직 남아 있다.
+- Capacitor 설정과 iOS 플랫폼 추가 이후 iPhone 실기기에서 핵심 지도 흐름을 확인했다.
 
 범위:
 
@@ -196,15 +196,16 @@ MVP 제외:
 - [x] NativeMap Capacitor plugin 초안 추가
 - [x] WebView overlay의 버튼·카드 영역만 터치받고 나머지는 embedded MapKit으로 넘기는 touch pass-through 구현
 - [x] iPhone 홈 화면의 MY 상단 버튼 제거, 브랜드 카드 재배치, native 현위치 이동 버튼 추가
-- [ ] iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시 확인
+- [x] iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시 확인
 - [x] 시설 데이터 local-first 번들링 전략 1차 구현
+- [x] iPhone 실기기에서 Apple MapKit 드래그·확대/축소, 현위치 이동 버튼, 시설 마커, JSON 로딩 체감 확인
 
 주의점:
 
 - Capacitor 앱 안에서는 Vite dev proxy가 없으므로 `/api` 상대 경로만으로 FastAPI에 접근할 수 없다.
 - 카카오맵 SDK는 허용 도메인/origin 설정의 영향을 받으며, Capacitor 정적 앱의 `capacitor://localhost`에서는 안정적이지 않다.
 - 시설 데이터는 `apps/web/public/data/facilities.json`에 정규화된 JSON으로 생성하며, 프론트는 이 파일을 먼저 조회한다.
-- 시설 JSON은 약 5.2MB, gzip 기준 약 389KB이며 로컬 Node 기준 평균 파싱 시간은 약 8.7ms다.
+- 시설 JSON은 약 5.2MB, gzip 기준 약 389KB이며 로컬 Node 기준 평균 파싱 시간은 약 8.7ms다. iPhone 실기기에서도 빠르게 로딩되는 것을 확인했다.
 - `NativeMap`은 React가 현재 위치와 표시 중인 시설 최대 300개를 Swift embedded `MKMapView`에 동기화하는 구조로 시작했다.
 - `NativeMap.setTouchAreas(...)`는 React UI의 버튼·카드 좌표를 Swift에 넘겨, 그 외 영역의 드래그와 핀치 줌을 native map이 받을 수 있게 한다.
 - 실기기 실행에는 Xcode 설정, 개발자 계정 로그인, iPhone 신뢰 설정이 필요할 수 있다.
