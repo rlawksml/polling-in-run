@@ -117,6 +117,9 @@ def get_api_env_value(key: str) -> Optional[str]:
     if value:
         return value.strip().strip('"').strip("'")
 
+    if os.getenv("POLLING_IN_RUN_SKIP_DOTENV") == "1":
+        return None
+
     env_path = Path(__file__).resolve().parents[1] / ".env"
 
     if not env_path.exists():

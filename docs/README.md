@@ -48,6 +48,8 @@
 
 - [`모바일 실기기 검증`](./qa/mobile-real-device-check.md)
 - [`Capacitor iOS Preview`](./qa/capacitor-ios-preview.md)
+- [`테스트 전략`](./qa/testing-strategy.md)
+- [`테스트 리포트 - 2026-06-24`](./qa/test-report-2026-06-24.md)
 
 ## Blog Drafts
 
