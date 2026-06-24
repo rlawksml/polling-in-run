@@ -510,6 +510,29 @@ describe('App', () => {
           routePointCount: 0,
           savedAt: '2026-05-12T00:00:00.000Z',
         },
+        {
+          distanceM: 0,
+          elapsedMs: 3000,
+          id: 'run-3',
+          memo: '정지 기록',
+          pace: '20:36 /km',
+          routePointCount: 2,
+          routePoints: [
+            {
+              accuracy: 10,
+              latitude: 37.5665,
+              longitude: 126.978,
+              timestamp: 1000,
+            },
+            {
+              accuracy: 10,
+              latitude: 37.5665,
+              longitude: 126.978,
+              timestamp: 2000,
+            },
+          ],
+          savedAt: '2026-04-12T00:00:00.000Z',
+        },
       ]),
     )
 
@@ -543,6 +566,13 @@ describe('App', () => {
     const firstRecord = within(recordList).getAllByRole('button')[0]
 
     expect(firstRecord).toHaveTextContent('3.20 km')
+
+    fireEvent.change(screen.getByLabelText('러닝 기록 정렬'), {
+      target: { value: 'date' },
+    })
+    fireEvent.click(within(recordList).getAllByRole('button')[2])
+
+    expect(screen.getByText('이동 없이 머문 기록')).toBeInTheDocument()
   })
 
   it('tracks running location points while the screen is active', async () => {

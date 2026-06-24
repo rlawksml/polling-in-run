@@ -261,7 +261,7 @@ function getVisibleRecords(
   return getSortedRecords(filteredRecords, sortKey)
 }
 
-function getRoutePathData(points: RunLocationPoint[]) {
+function getRoutePathData(points: RunLocationPoint[], distanceM: number) {
   if (points.length < 2) {
     return null
   }
@@ -281,6 +281,9 @@ function getRoutePathData(points: RunLocationPoint[]) {
   const width = 280
   const height = 132
   const padding = 16
+  const longitudeDelta = maxLongitude - minLongitude
+  const latitudeDelta = maxLatitude - minLatitude
+  const isStationary = distanceM <= 0 || (longitudeDelta < 0.00003 && latitudeDelta < 0.00003)
   const xScale = scaleLinear()
     .domain(
       minLongitude === maxLongitude
@@ -306,6 +309,7 @@ function getRoutePathData(points: RunLocationPoint[]) {
   return {
     end: points[points.length - 1],
     height,
+    isStationary,
     pathData,
     start: points[0],
     width,
@@ -479,7 +483,7 @@ function App() {
     .nice()
     .range([goalChartPadding.left, goalChartWidth - goalChartPadding.right])
   const selectedRoutePath = selectedRecord?.routePoints
-    ? getRoutePathData(selectedRecord.routePoints)
+    ? getRoutePathData(selectedRecord.routePoints, selectedRecord.distanceM)
     : null
 
   useEffect(() => {
@@ -1006,19 +1010,37 @@ function App() {
                         aria-label="러닝 경로 간단 시각화"
                         viewBox={`0 0 ${selectedRoutePath.width} ${selectedRoutePath.height}`}
                       >
-                        <path d={selectedRoutePath.pathData} />
+                        <rect className="route-map-park" x="16" y="18" width="62" height="34" rx="16" />
+                        <rect className="route-map-block" x="174" y="82" width="76" height="26" rx="13" />
+                        <path className="route-map-road" d="M20 96 C72 74 108 76 150 48 S230 20 262 34" />
+                        <path className="route-map-road is-secondary" d="M54 24 C80 58 86 86 74 118" />
+                        <path className="route-map-road is-secondary" d="M134 118 C154 94 184 70 226 58" />
+                        {!selectedRoutePath.isStationary && (
+                          <path className="route-line" d={selectedRoutePath.pathData} />
+                        )}
                         <circle
                           className="route-start"
                           cx={selectedRoutePath.xScale(selectedRoutePath.start.longitude)}
                           cy={selectedRoutePath.yScale(selectedRoutePath.start.latitude)}
-                          r="4"
+                          r={selectedRoutePath.isStationary ? '7' : '4'}
                         />
-                        <circle
-                          className="route-end"
-                          cx={selectedRoutePath.xScale(selectedRoutePath.end.longitude)}
-                          cy={selectedRoutePath.yScale(selectedRoutePath.end.latitude)}
-                          r="4"
-                        />
+                        {selectedRoutePath.isStationary ? (
+                          <text
+                            className="route-stationary-label"
+                            x={selectedRoutePath.width / 2}
+                            y={selectedRoutePath.height - 18}
+                            textAnchor="middle"
+                          >
+                            이동 없이 머문 기록
+                          </text>
+                        ) : (
+                          <circle
+                            className="route-end"
+                            cx={selectedRoutePath.xScale(selectedRoutePath.end.longitude)}
+                            cy={selectedRoutePath.yScale(selectedRoutePath.end.latitude)}
+                            r="4"
+                          />
+                        )}
                       </svg>
                     ) : (
                       <span>

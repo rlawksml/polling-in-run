@@ -1021,16 +1021,45 @@ button {
   width: 100%;
   border-radius: 14px;
   background:
-    linear-gradient(rgba(147, 197, 253, 0.1), rgba(147, 197, 253, 0.04)),
-    #0b1220;
+    linear-gradient(rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.34)),
+    repeating-linear-gradient(
+      36deg,
+      rgba(148, 163, 184, 0.16) 0,
+      rgba(148, 163, 184, 0.16) 2px,
+      transparent 2px,
+      transparent 34px
+    ),
+    #eef3ec;
 }
 
-.record-route-preview path {
+.record-route-preview .route-map-park {
+  fill: rgba(134, 197, 112, 0.34);
+}
+
+.record-route-preview .route-map-block {
+  fill: rgba(226, 232, 240, 0.74);
+}
+
+.record-route-preview .route-map-road {
   fill: none;
-  stroke: #93c5fd;
+  stroke: rgba(148, 163, 184, 0.78);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 4;
+  stroke-width: 8;
+}
+
+.record-route-preview .route-map-road.is-secondary {
+  stroke: rgba(203, 213, 225, 0.86);
+  stroke-width: 5;
+}
+
+.record-route-preview .route-line {
+  fill: none;
+  stroke: #2563eb;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.28));
 }
 
 .record-route-preview circle {
@@ -1044,6 +1073,12 @@ button {
 
 .record-route-preview .route-end {
   fill: #f97316;
+}
+
+.record-route-preview .route-stationary-label {
+  fill: #475467;
+  font-size: 0.68rem;
+  font-weight: 900;
 }
 
 .record-delete-button {
