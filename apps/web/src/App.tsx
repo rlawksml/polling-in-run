@@ -1,19 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import type { FormEvent } from 'react'
-import { useEffect, useState } from 'react'
-import {
-  checkUserIdAvailability,
-  deleteCurrentUserAccount,
-  getCurrentAuthSession,
-  isSupabaseConfigured,
-  isValidUserId,
-  normalizeUserId,
-  signInWithUserId,
-  signOut,
-  signUpWithUserId,
-  subscribeAuthSession,
-  type AuthSession,
-} from './api/auth'
+import { Capacitor } from '@capacitor/core'
+import { extent, line, max, scaleBand, scaleLinear } from 'd3'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   getFacilities,
   type FacilityBounds,
@@ -27,9 +15,15 @@ import {
   formatDistance,
   formatElapsedTime,
   formatPace,
+  type RunLocationPoint,
   useRunningSession,
 } from './hooks/use-running-session'
 import './App.css'
+import {
+  NativeMap,
+  type NativeMapFacility,
+  type NativeMapTouchArea,
+} from './lib/native-map'
 
 const locationMessages = {
   idle: '현재 위치를 준비하고 있어요.',
@@ -42,27 +36,45 @@ const locationMessages = {
 }
 
 const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
-
-function getRunRecordsStorageKey(authSession: AuthSession | null): string {
-  if (!authSession) {
-    return RUN_RECORDS_STORAGE_KEY
-  }
-
-  return `${RUN_RECORDS_STORAGE_KEY}.user.${encodeURIComponent(authSession.userId)}`
+const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
+const APP_BOOT_MIN_LOADING_MS = 2000
+const NATIVE_MAP_FACILITY_LIMIT = 300
+const NATIVE_TOUCH_AREA_SELECTORS = [
+  '.home-brand-card',
+  '.app-loading-screen',
+  '.map-loading-skeleton',
+  '.facility-filter',
+  '.facility-status',
+  '.native-map-controls',
+  '.native-map-status',
+  '.location-card',
+  '.records-panel',
+  '.my-panel',
+  '.running-panel',
+  '.start-button',
+  '.bottom-nav',
+] as const
+const DEFAULT_RUN_GOALS = {
+  monthlyDistanceKm: 40,
+  weeklyDistanceKm: 10,
 }
 
 type AppTab = 'home' | 'records' | 'my'
-type AuthMode = 'login' | 'signup'
+type RecordMemoFilter = 'all' | 'memo'
+type RecordSortKey = 'date' | 'distance' | 'duration' | 'pace'
 
 type RunRecord = {
   distanceM: number
   elapsedMs: number
   id: string
-  memo: string
+  memo?: string
   pace: string
+  routePoints?: RunLocationPoint[]
   routePointCount: number
   savedAt: string
 }
+
+type RunGoals = typeof DEFAULT_RUN_GOALS
 
 function readRunRecords(storageKey: string): RunRecord[] {
   try {
@@ -74,50 +86,264 @@ function readRunRecords(storageKey: string): RunRecord[] {
   }
 }
 
-function validateAuthForm(
-  mode: AuthMode,
-  userId: string,
-  password: string,
-  passwordConfirm: string,
-): string | null {
-  if (!isValidUserId(userId)) {
-    return 'ID는 영문 소문자, 숫자, -, _ 조합으로 4~24자 입력해주세요.'
+function readRunGoals(storageKey: string): RunGoals {
+  try {
+    const rawGoals = window.localStorage.getItem(storageKey)
+
+    if (!rawGoals) {
+      return DEFAULT_RUN_GOALS
+    }
+
+    const parsedGoals = JSON.parse(rawGoals)
+
+    return {
+      monthlyDistanceKm:
+        Number(parsedGoals.monthlyDistanceKm) || DEFAULT_RUN_GOALS.monthlyDistanceKm,
+      weeklyDistanceKm:
+        Number(parsedGoals.weeklyDistanceKm) || DEFAULT_RUN_GOALS.weeklyDistanceKm,
+    }
+  } catch {
+    return DEFAULT_RUN_GOALS
+  }
+}
+
+function startOfWeek(date: Date) {
+  const nextDate = new Date(date)
+  const day = nextDate.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+
+  nextDate.setDate(nextDate.getDate() + diff)
+  nextDate.setHours(0, 0, 0, 0)
+
+  return nextDate
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function sumDistanceSince(records: RunRecord[], startDate: Date) {
+  return records.reduce((sum, record) => {
+    const savedAt = new Date(record.savedAt)
+
+    return savedAt >= startDate ? sum + record.distanceM : sum
+  }, 0)
+}
+
+function formatGoalProgress(distanceM: number, goalKm: number) {
+  if (goalKm <= 0) {
+    return 0
   }
 
-  if (password.length < 8) {
-    return '비밀번호는 8자 이상 입력해주세요.'
+  return Math.min(100, Math.round((distanceM / (goalKm * 1000)) * 100))
+}
+
+function formatAveragePace(records: RunRecord[]) {
+  const totalDistanceM = records.reduce((sum, record) => sum + record.distanceM, 0)
+  const totalElapsedMs = records.reduce((sum, record) => sum + record.elapsedMs, 0)
+
+  return formatPace(totalElapsedMs, totalDistanceM)
+}
+
+function getMonthlyDistanceSeries(records: RunRecord[]) {
+  const now = new Date()
+
+  return Array.from({ length: 4 }, (_, index) => {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - (3 - index), 1)
+    const label = `${monthDate.getMonth() + 1}월`
+    const distanceM = records
+      .filter((record) => {
+        const savedAt = new Date(record.savedAt)
+
+        return (
+          savedAt.getFullYear() === monthDate.getFullYear() &&
+          savedAt.getMonth() === monthDate.getMonth()
+        )
+      })
+      .reduce((sum, record) => sum + record.distanceM, 0)
+
+    return { distanceM, label }
+  })
+}
+
+function getGoalComparisonSeries(
+  weeklyDistanceM: number,
+  monthlyDistanceM: number,
+  goals: RunGoals,
+) {
+  return [
+    {
+      actualKm: weeklyDistanceM / 1000,
+      goalKm: goals.weeklyDistanceKm,
+      label: '이번 주',
+    },
+    {
+      actualKm: monthlyDistanceM / 1000,
+      goalKm: goals.monthlyDistanceKm,
+      label: '이번 달',
+    },
+  ]
+}
+
+function getRunningCalendarDays(records: RunRecord[]) {
+  const currentMonth = startOfMonth(new Date())
+  const runningDays = new Set(
+    records
+      .filter((record) => new Date(record.savedAt) >= currentMonth)
+      .map((record) => new Date(record.savedAt).getDate()),
+  )
+  const daysInMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() + 1,
+    0,
+  ).getDate()
+
+  return Array.from({ length: daysInMonth }, (_, index) => ({
+    day: index + 1,
+    hasRun: runningDays.has(index + 1),
+  }))
+}
+
+function getRecordMonthKey(record: RunRecord) {
+  const savedAt = new Date(record.savedAt)
+
+  return `${savedAt.getFullYear()}-${String(savedAt.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getRecordMonthLabel(monthKey: string) {
+  const [year, month] = monthKey.split('-')
+
+  return `${year}년 ${Number(month)}월`
+}
+
+function getRecordMonthOptions(records: RunRecord[]) {
+  return Array.from(new Set(records.map(getRecordMonthKey))).sort((a, b) =>
+    b.localeCompare(a),
+  )
+}
+
+function getSortedRecords(records: RunRecord[], sortKey: RecordSortKey) {
+  return [...records].sort((a, b) => {
+    if (sortKey === 'distance') {
+      return b.distanceM - a.distanceM
+    }
+
+    if (sortKey === 'duration') {
+      return b.elapsedMs - a.elapsedMs
+    }
+
+    if (sortKey === 'pace') {
+      const paceA = a.distanceM > 0 ? a.elapsedMs / (a.distanceM / 1000) : Infinity
+      const paceB = b.distanceM > 0 ? b.elapsedMs / (b.distanceM / 1000) : Infinity
+
+      return paceA - paceB
+    }
+
+    return new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+  })
+}
+
+function getVisibleRecords(
+  records: RunRecord[],
+  memoFilter: RecordMemoFilter,
+  monthFilter: string,
+  sortKey: RecordSortKey,
+) {
+  const filteredRecords = records.filter((record) => {
+    const matchesMemo =
+      memoFilter === 'all' || (record.memo?.trim().length ?? 0) > 0
+    const matchesMonth =
+      monthFilter === 'all' || getRecordMonthKey(record) === monthFilter
+
+    return matchesMemo && matchesMonth
+  })
+
+  return getSortedRecords(filteredRecords, sortKey)
+}
+
+function getRoutePathData(points: RunLocationPoint[], distanceM: number) {
+  if (points.length < 2) {
+    return null
   }
 
-  if (mode === 'signup' && password !== passwordConfirm) {
-    return '비밀번호 확인이 일치하지 않아요.'
+  const [minLongitude, maxLongitude] = extent(points, (point) => point.longitude)
+  const [minLatitude, maxLatitude] = extent(points, (point) => point.latitude)
+
+  if (
+    minLongitude === undefined ||
+    maxLongitude === undefined ||
+    minLatitude === undefined ||
+    maxLatitude === undefined
+  ) {
+    return null
   }
 
-  return null
+  const width = 280
+  const height = 132
+  const padding = 16
+  const longitudeDelta = maxLongitude - minLongitude
+  const latitudeDelta = maxLatitude - minLatitude
+  const isStationary = distanceM <= 0 || (longitudeDelta < 0.00003 && latitudeDelta < 0.00003)
+  const xScale = scaleLinear()
+    .domain(
+      minLongitude === maxLongitude
+        ? [minLongitude - 0.0005, maxLongitude + 0.0005]
+        : [minLongitude, maxLongitude],
+    )
+    .range([padding, width - padding])
+  const yScale = scaleLinear()
+    .domain(
+      minLatitude === maxLatitude
+        ? [minLatitude - 0.0005, maxLatitude + 0.0005]
+        : [minLatitude, maxLatitude],
+    )
+    .range([height - padding, padding])
+  const pathData = line<RunLocationPoint>()
+    .x((point) => xScale(point.longitude))
+    .y((point) => yScale(point.latitude))(points)
+
+  if (!pathData) {
+    return null
+  }
+
+  return {
+    end: points[points.length - 1],
+    height,
+    isStationary,
+    pathData,
+    start: points[0],
+    width,
+    xScale,
+    yScale,
+  }
 }
 
 function App() {
+  const isNativePlatform = Capacitor.isNativePlatform()
+  const routePreviewRef = useRef<HTMLDivElement | null>(null)
   const { location, requestLocation, status } = useCurrentLocation()
   const running = useRunningSession()
   const [mapBounds, setMapBounds] = useState<FacilityBounds | null>(null)
+  const [nativeMapMessage, setNativeMapMessage] = useState<string | null>(null)
   const [runMemo, setRunMemo] = useState('')
   const [recordSaveMessage, setRecordSaveMessage] = useState<string | null>(null)
+  const [isBootSplashVisible, setIsBootSplashVisible] = useState(true)
   const [activeTab, setActiveTab] = useState<AppTab>('home')
-  const [authMode, setAuthMode] = useState<AuthMode>('login')
-  const [authUserId, setAuthUserId] = useState('')
-  const [authPassword, setAuthPassword] = useState('')
-  const [authPasswordConfirm, setAuthPasswordConfirm] = useState('')
-  const [authMessage, setAuthMessage] = useState<string | null>(null)
-  const [authSession, setAuthSession] = useState<AuthSession | null>(null)
-  const [availableUserId, setAvailableUserId] = useState<string | null>(null)
-  const [isCheckingUserId, setIsCheckingUserId] = useState(false)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
-  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
-  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false)
-  const recordsStorageKey = getRunRecordsStorageKey(authSession)
+  const [recordMemoFilter, setRecordMemoFilter] =
+    useState<RecordMemoFilter>('all')
+  const [recordMonthFilter, setRecordMonthFilter] = useState('all')
+  const [recordSortKey, setRecordSortKey] = useState<RecordSortKey>('date')
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
     readRunRecords(RUN_RECORDS_STORAGE_KEY),
   )
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
+  const [runGoals, setRunGoals] = useState<RunGoals>(() =>
+    readRunGoals(RUN_GOALS_STORAGE_KEY),
+  )
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(() => {
+    const records = readRunRecords(RUN_RECORDS_STORAGE_KEY)
+
+    return records[0]?.id ?? null
+  })
   const facilities = useQuery({
     queryKey: [
       'facilities',
@@ -131,7 +357,9 @@ function App() {
         latitude: location?.latitude,
         longitude: location?.longitude,
       }),
-    enabled: status !== 'loading' && mapBounds !== null,
+    enabled:
+      status !== 'loading' &&
+      (isNativePlatform ? location !== null : mapBounds !== null),
   })
   const [visibleTypes, setVisibleTypes] = useState<FacilityType[]>([
     'water',
@@ -143,41 +371,325 @@ function App() {
     'timeout',
     'unsupported',
   ].includes(status)
-  const visibleFacilities = (facilities.data ?? []).filter((facility) =>
-    visibleTypes.includes(facility.type),
+  const currentLatitude = location?.latitude
+  const currentLongitude = location?.longitude
+  const visibleFacilities = useMemo(
+    () =>
+      (facilities.data ?? []).filter((facility) =>
+        visibleTypes.includes(facility.type),
+      ),
+    [facilities.data, visibleTypes],
+  )
+  const nativeFacilities = useMemo<NativeMapFacility[]>(
+    () =>
+      visibleFacilities
+        .slice(0, NATIVE_MAP_FACILITY_LIMIT)
+        .map(({ address, id, latitude, longitude, name, type }) => ({
+          address,
+          id,
+          latitude,
+          longitude,
+          name,
+          type,
+        })),
+    [visibleFacilities],
   )
   const isRunningSessionActive = running.status !== 'idle'
+  const isAppBootLoading =
+    !isRunningSessionActive &&
+    activeTab === 'home' &&
+    (isBootSplashVisible ||
+      (!hasLocationError && (status === 'idle' || status === 'loading')))
+  const isMapDataLoading =
+    !isRunningSessionActive &&
+    activeTab === 'home' &&
+    !hasLocationError &&
+    !isAppBootLoading &&
+    facilities.isPending
+  const recordMonthOptions = getRecordMonthOptions(runRecords)
+  const visibleRunRecords = getVisibleRecords(
+    runRecords,
+    recordMemoFilter,
+    recordMonthFilter,
+    recordSortKey,
+  )
   const selectedRecord =
-    runRecords.find((record) => record.id === selectedRecordId) ?? null
-  const authTitle = authMode === 'login' ? '로그인' : '회원가입'
-
-  const loadRecordsForSession = (session: AuthSession | null) => {
-    const records = readRunRecords(getRunRecordsStorageKey(session))
-
-    setRunRecords(records)
-    setSelectedRecordId(records[0]?.id ?? null)
+    visibleRunRecords.find((record) => record.id === selectedRecordId) ??
+    visibleRunRecords[0] ??
+    null
+  const totalDistanceM = runRecords.reduce(
+    (sum, record) => sum + record.distanceM,
+    0,
+  )
+  const latestRecordDate = runRecords[0]
+    ? new Date(runRecords[0].savedAt).toLocaleDateString('ko-KR')
+    : '아직 없음'
+  const now = new Date()
+  const weeklyDistanceM = sumDistanceSince(runRecords, startOfWeek(now))
+  const monthlyDistanceM = sumDistanceSince(runRecords, startOfMonth(now))
+  const longestRecord = runRecords.reduce<RunRecord | null>(
+    (longest, record) =>
+      !longest || record.distanceM > longest.distanceM ? record : longest,
+    null,
+  )
+  const averagePace = formatAveragePace(runRecords)
+  const weeklyProgress = formatGoalProgress(
+    weeklyDistanceM,
+    runGoals.weeklyDistanceKm,
+  )
+  const monthlyProgress = formatGoalProgress(
+    monthlyDistanceM,
+    runGoals.monthlyDistanceKm,
+  )
+  const monthlyDistanceSeries = getMonthlyDistanceSeries(runRecords)
+  const goalComparisonSeries = getGoalComparisonSeries(
+    weeklyDistanceM,
+    monthlyDistanceM,
+    runGoals,
+  )
+  const runningCalendarDays = getRunningCalendarDays(runRecords)
+  const distanceChartWidth = 280
+  const distanceChartHeight = 150
+  const distanceChartPadding = {
+    bottom: 28,
+    left: 12,
+    right: 12,
+    top: 14,
   }
+  const distanceXScale = scaleBand<string>()
+    .domain(monthlyDistanceSeries.map((item) => item.label))
+    .range([distanceChartPadding.left, distanceChartWidth - distanceChartPadding.right])
+    .padding(0.34)
+  const distanceYScale = scaleLinear()
+    .domain([0, max(monthlyDistanceSeries, (item) => item.distanceM) || 1000])
+    .nice()
+    .range([distanceChartHeight - distanceChartPadding.bottom, distanceChartPadding.top])
+  const goalChartWidth = 280
+  const goalChartHeight = 124
+  const goalChartPadding = {
+    bottom: 28,
+    left: 64,
+    right: 12,
+    top: 12,
+  }
+  const goalYScale = scaleBand<string>()
+    .domain(goalComparisonSeries.map((item) => item.label))
+    .range([goalChartPadding.top, goalChartHeight - goalChartPadding.bottom])
+    .padding(0.34)
+  const goalXScale = scaleLinear()
+    .domain([
+      0,
+      max(goalComparisonSeries, (item) => Math.max(item.actualKm, item.goalKm)) || 1,
+    ])
+    .nice()
+    .range([goalChartPadding.left, goalChartWidth - goalChartPadding.right])
+  const selectedRoutePath = selectedRecord?.routePoints
+    ? getRoutePathData(selectedRecord.routePoints, selectedRecord.distanceM)
+    : null
+  const selectedRoutePoints = selectedRecord?.routePoints ?? []
+  const hasSelectedRoutePoints = selectedRoutePoints.length > 0
 
   useEffect(() => {
-    let isMounted = true
+    const timerId = window.setTimeout(() => {
+      setIsBootSplashVisible(false)
+    }, APP_BOOT_MIN_LOADING_MS)
 
-    getCurrentAuthSession().then((session) => {
-      if (isMounted) {
-        setAuthSession(session)
-        loadRecordsForSession(session)
-      }
-    })
+    return () => window.clearTimeout(timerId)
+  }, [])
 
-    const unsubscribe = subscribeAuthSession((session) => {
-      setAuthSession(session)
-      loadRecordsForSession(session)
-    })
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-native-map', isNativePlatform)
+    document.body.classList.toggle('is-native-map', isNativePlatform)
 
     return () => {
-      isMounted = false
-      unsubscribe()
+      document.documentElement.classList.remove('is-native-map')
+      document.body.classList.remove('is-native-map')
     }
-  }, [])
+  }, [isNativePlatform])
+
+  useLayoutEffect(() => {
+    if (!isNativePlatform) {
+      return
+    }
+
+    let animationFrameId = 0
+
+    const getInteractiveTouchAreas = (): NativeMapTouchArea[] => {
+      if (running.status === 'finished') {
+        return [
+          {
+            height: window.innerHeight,
+            width: window.innerWidth,
+            x: 0,
+            y: 0,
+          },
+        ]
+      }
+
+      return NATIVE_TOUCH_AREA_SELECTORS.flatMap((selector) =>
+        Array.from(document.querySelectorAll<HTMLElement>(selector)),
+      )
+        .map((element) => {
+          const styles = window.getComputedStyle(element)
+          const rect = element.getBoundingClientRect()
+
+          if (
+            styles.display === 'none' ||
+            styles.visibility === 'hidden' ||
+            rect.width <= 0 ||
+            rect.height <= 0
+          ) {
+            return null
+          }
+
+          return {
+            height: rect.height,
+            width: rect.width,
+            x: rect.left,
+            y: rect.top,
+          }
+        })
+        .filter((area): area is NativeMapTouchArea => area !== null)
+    }
+
+    const syncTouchAreas = () => {
+      window.cancelAnimationFrame(animationFrameId)
+      animationFrameId = window.requestAnimationFrame(() => {
+        void NativeMap.setTouchAreas({
+          areas: getInteractiveTouchAreas(),
+        }).catch(() => undefined)
+      })
+    }
+
+    syncTouchAreas()
+    document.addEventListener('focusin', syncTouchAreas)
+    document.addEventListener('focusout', syncTouchAreas)
+    window.addEventListener('resize', syncTouchAreas)
+    window.addEventListener('orientationchange', syncTouchAreas)
+    window.visualViewport?.addEventListener('resize', syncTouchAreas)
+    window.visualViewport?.addEventListener('scroll', syncTouchAreas)
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      document.removeEventListener('focusin', syncTouchAreas)
+      document.removeEventListener('focusout', syncTouchAreas)
+      window.removeEventListener('resize', syncTouchAreas)
+      window.removeEventListener('orientationchange', syncTouchAreas)
+      window.visualViewport?.removeEventListener('resize', syncTouchAreas)
+      window.visualViewport?.removeEventListener('scroll', syncTouchAreas)
+      void NativeMap.setTouchAreas({ areas: [] }).catch(() => undefined)
+    }
+  }, [
+    activeTab,
+    facilities.isPending,
+    facilities.isSuccess,
+    hasLocationError,
+    isAppBootLoading,
+    isMapDataLoading,
+    isNativePlatform,
+    isRunningSessionActive,
+    nativeMapMessage,
+    recordMemoFilter,
+    recordMonthFilter,
+    recordSortKey,
+    runRecords.length,
+    running.status,
+    selectedRecordId,
+    status,
+    visibleFacilities.length,
+    visibleRunRecords.length,
+    visibleTypes,
+  ])
+
+  useLayoutEffect(() => {
+    if (!isNativePlatform) {
+      return
+    }
+
+    let animationFrameId = 0
+    const recordsPanel = document.querySelector<HTMLElement>('.records-panel')
+
+    const hideRoutePreview = () => {
+      void NativeMap.showRoutePreview({
+        distanceM: 0,
+        frame: null,
+        points: [],
+      }).catch(() => undefined)
+    }
+
+    const syncRoutePreview = () => {
+      window.cancelAnimationFrame(animationFrameId)
+      animationFrameId = window.requestAnimationFrame(() => {
+        if (
+          activeTab !== 'records' ||
+          !selectedRecord ||
+          !selectedRecord.routePoints?.length
+        ) {
+          hideRoutePreview()
+          return
+        }
+
+        const element = routePreviewRef.current
+
+        if (!element) {
+          hideRoutePreview()
+          return
+        }
+
+        const rect = element.getBoundingClientRect()
+        const bottomNavRect = document
+          .querySelector<HTMLElement>('.bottom-nav')
+          ?.getBoundingClientRect()
+        const viewportBottom = bottomNavRect
+          ? Math.min(bottomNavRect.top - 8, window.innerHeight)
+          : window.innerHeight
+        const visibleTop = Math.max(rect.top, 0)
+        const visibleBottom = Math.min(rect.bottom, viewportBottom)
+        const visibleHeight = visibleBottom - visibleTop
+        const isVisible =
+          rect.width > 0 &&
+          visibleHeight >= 48 &&
+          rect.bottom > 0 &&
+          rect.top < viewportBottom
+
+        if (!isVisible) {
+          hideRoutePreview()
+          return
+        }
+
+        void NativeMap.showRoutePreview({
+          distanceM: selectedRecord.distanceM,
+          frame: {
+            height: visibleHeight,
+            width: rect.width,
+            x: rect.left,
+            y: visibleTop,
+          },
+          points: selectedRecord.routePoints.map((point) => ({
+            latitude: point.latitude,
+            longitude: point.longitude,
+          })),
+        }).catch(() => undefined)
+      })
+    }
+
+    syncRoutePreview()
+    recordsPanel?.addEventListener('scroll', syncRoutePreview)
+    window.addEventListener('resize', syncRoutePreview)
+    window.addEventListener('orientationchange', syncRoutePreview)
+    window.visualViewport?.addEventListener('resize', syncRoutePreview)
+    window.visualViewport?.addEventListener('scroll', syncRoutePreview)
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      recordsPanel?.removeEventListener('scroll', syncRoutePreview)
+      window.removeEventListener('resize', syncRoutePreview)
+      window.removeEventListener('orientationchange', syncRoutePreview)
+      window.visualViewport?.removeEventListener('resize', syncRoutePreview)
+      window.visualViewport?.removeEventListener('scroll', syncRoutePreview)
+      hideRoutePreview()
+    }
+  }, [activeTab, isNativePlatform, selectedRecord])
 
   const toggleFacilityType = (type: FacilityType) => {
     setVisibleTypes((current) =>
@@ -193,68 +705,54 @@ function App() {
     running.reset()
   }
 
-  const changeAuthUserId = (userId: string) => {
-    setAuthUserId(userId)
-    setAvailableUserId(null)
-  }
+  const dismissFocusedControl = () => {
+    const activeElement = document.activeElement
 
-  const checkCurrentUserIdAvailability = async () => {
-    if (!isValidUserId(authUserId)) {
-      setAuthMessage('ID는 영문 소문자, 숫자, -, _ 조합으로 4~24자 입력해주세요.')
-      setAvailableUserId(null)
-      return
-    }
-
-    try {
-      setIsCheckingUserId(true)
-      const normalizedUserId = normalizeUserId(authUserId)
-      const isAvailable = await checkUserIdAvailability(normalizedUserId)
-
-      if (isAvailable) {
-        setAvailableUserId(normalizedUserId)
-        setAuthMessage('사용할 수 있는 ID예요.')
-        return
-      }
-
-      setAvailableUserId(null)
-      setAuthMessage('이미 사용 중인 ID예요. 다른 ID를 입력해주세요.')
-    } catch (error) {
-      setAvailableUserId(null)
-      setAuthMessage(
-        error instanceof Error
-          ? error.message
-          : 'ID 중복 확인을 처리하지 못했어요.',
-      )
-    } finally {
-      setIsCheckingUserId(false)
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur()
     }
   }
 
   const saveRunningRecord = () => {
+    dismissFocusedControl()
+
+    if (Math.round(running.distanceM) <= 0) {
+      setRecordSaveMessage('0km 러닝은 기록으로 저장하지 않아요. 조금 이동한 뒤 다시 저장해주세요.')
+      return
+    }
+
+    const trimmedMemo = runMemo.trim()
+
+    if (trimmedMemo.length === 0) {
+      setRecordSaveMessage('러닝 메모를 남겨야 기록으로 저장할 수 있어요.')
+      return
+    }
+
     try {
-      const record = {
+      const record: RunRecord = {
         distanceM: Math.round(running.distanceM),
         elapsedMs: running.elapsedMs,
         id: `run-${Date.now()}`,
-        memo: runMemo.trim(),
+        memo: trimmedMemo,
         pace: formatPace(running.elapsedMs, running.distanceM),
+        routePoints: running.routePoints,
         routePointCount: running.routePointCount,
         savedAt: new Date().toISOString(),
       }
-      const records = readRunRecords(recordsStorageKey)
+
+      const records = readRunRecords(RUN_RECORDS_STORAGE_KEY)
       const nextRecords = [record, ...records]
 
       window.localStorage.setItem(
-        recordsStorageKey,
+        RUN_RECORDS_STORAGE_KEY,
         JSON.stringify(nextRecords),
       )
       setRunRecords(nextRecords)
       setSelectedRecordId(record.id)
-      setRecordSaveMessage(
-        authSession
-          ? '기록을 내 계정 로컬 저장소에 저장했어요. 하단 기록 탭에서 다시 볼 수 있어요.'
-          : '기록을 이 기기에 임시 저장했어요. 로그인하면 계정별 기록을 따로 관리할 수 있어요.',
-      )
+      setRunMemo('')
+      setRecordSaveMessage(null)
+      setActiveTab('records')
+      running.reset()
     } catch {
       setRecordSaveMessage('기록 저장에 실패했어요. 작성한 메모는 화면에 그대로 남아 있어요.')
     }
@@ -264,153 +762,136 @@ function App() {
     const nextRecords = runRecords.filter((record) => record.id !== recordId)
 
     window.localStorage.setItem(
-      recordsStorageKey,
+      RUN_RECORDS_STORAGE_KEY,
       JSON.stringify(nextRecords),
     )
     setRunRecords(nextRecords)
     setSelectedRecordId(nextRecords[0]?.id ?? null)
   }
 
-  const submitAuthForm = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const validationMessage = validateAuthForm(
-      authMode,
-      authUserId,
-      authPassword,
-      authPasswordConfirm,
-    )
-
-    if (validationMessage) {
-      setAuthMessage(validationMessage)
-      return
-    }
-
-    if (
-      authMode === 'signup'
-      && availableUserId !== normalizeUserId(authUserId)
-    ) {
-      setAuthMessage('회원가입 전에 ID 중복 확인을 완료해주세요.')
-      return
-    }
-
-    try {
-      setIsAuthSubmitting(true)
-      const result =
-        authMode === 'login'
-          ? await signInWithUserId(authUserId, authPassword)
-          : await signUpWithUserId(authUserId, authPassword)
-
-      setAuthMessage(result.message)
-
-      if (result.session) {
-        setAuthSession(result.session)
-        loadRecordsForSession(result.session)
-        setAuthPassword('')
-        setAuthPasswordConfirm('')
-      }
-    } catch (error) {
-      setAuthMessage(
-        error instanceof Error
-          ? error.message
-          : '인증 요청을 처리하지 못했어요.',
-      )
-    } finally {
-      setIsAuthSubmitting(false)
-    }
-  }
-
-  const switchAuthMode = (mode: AuthMode) => {
-    setAuthMode(mode)
-    setAuthPassword('')
-    setAuthPasswordConfirm('')
-    setAvailableUserId(null)
-    setAuthMessage(null)
-  }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      setAuthSession(null)
-      loadRecordsForSession(null)
-      setIsDeleteConfirming(false)
-      setAuthMessage('로그아웃했어요.')
-    } catch (error) {
-      setAuthMessage(
-        error instanceof Error
-          ? error.message
-          : '로그아웃을 처리하지 못했어요.',
-      )
-    }
-  }
-
-  const handleDeleteAccount = async () => {
-    if (!authSession) {
-      return
-    }
-
-    if (!isDeleteConfirming) {
-      setIsDeleteConfirming(true)
-      setAuthMessage('회원 탈퇴를 한 번 더 누르면 계정을 삭제해요.')
-      return
-    }
-
-    try {
-      setIsDeletingAccount(true)
-      const currentRecordsStorageKey = getRunRecordsStorageKey(authSession)
-
-      await deleteCurrentUserAccount(authSession)
-      window.localStorage.removeItem(currentRecordsStorageKey)
-      setAuthSession(null)
-      loadRecordsForSession(null)
-      setIsDeleteConfirming(false)
-      setAuthMessage('회원 탈퇴가 완료됐어요. 이 기기의 계정별 러닝 기록도 삭제했어요.')
-    } catch (error) {
-      setAuthMessage(
-        error instanceof Error
-          ? error.message
-          : '회원 탈퇴를 처리하지 못했어요.',
-      )
-    } finally {
-      setIsDeletingAccount(false)
-    }
-  }
-
   const openRecordsTab = () => {
-    if (!authSession) {
-      setActiveTab('my')
-      setAuthMode('login')
-      setAuthMessage('러닝 기록은 로그인 후 확인할 수 있어요.')
-      return
-    }
-
     setActiveTab('records')
   }
 
-  return (
-    <main className="app-shell">
-      <KakaoMap
-        facilities={visibleFacilities}
-        location={location}
-        onBoundsChange={setMapBounds}
-        onRequestLocation={requestLocation}
-      />
+  const moveNativeMapToCurrentLocation = () => {
+    requestLocation()
 
-      {!isRunningSessionActive && (
-        <header className="top-bar">
-          <div>
-            <p className="eyebrow">POLLING IN RUN</p>
-            <h1>달리기 좋은 순간이에요.</h1>
-          </div>
-          <Button
-            className="profile-button"
-            type="button"
-            aria-label="마이 페이지"
-            onClick={() => setActiveTab('my')}
-          >
-            MY
-          </Button>
+    if (currentLatitude === undefined || currentLongitude === undefined) {
+      return
+    }
+
+    void NativeMap.recenter({
+      center: {
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+      },
+    }).catch((error) => {
+      setNativeMapMessage(
+        error instanceof Error
+          ? error.message
+          : '현재 위치로 지도를 이동하지 못했어요.',
+      )
+    })
+  }
+
+  const updateRunGoal = (goalKey: keyof RunGoals, value: string) => {
+    const nextGoals = {
+      ...runGoals,
+      [goalKey]: Math.max(1, Number(value) || 1),
+    }
+
+    window.localStorage.setItem(
+      RUN_GOALS_STORAGE_KEY,
+      JSON.stringify(nextGoals),
+    )
+    setRunGoals(nextGoals)
+  }
+
+  useEffect(() => {
+    if (
+      !isNativePlatform ||
+      currentLatitude === undefined ||
+      currentLongitude === undefined
+    ) {
+      return
+    }
+
+    void NativeMap.sync({
+      center: {
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+      },
+      facilities: nativeFacilities,
+    })
+      .then(() => setNativeMapMessage(null))
+      .catch((error) => {
+        setNativeMapMessage(
+          error instanceof Error
+            ? error.message
+            : 'Apple 지도를 동기화하지 못했어요.',
+        )
+      })
+  }, [
+    isNativePlatform,
+    currentLatitude,
+    currentLongitude,
+    nativeFacilities,
+  ])
+
+  const appShellClassName = isNativePlatform
+    ? 'app-shell is-native-map'
+    : 'app-shell'
+
+  return (
+    <main className={appShellClassName}>
+      {isNativePlatform ? (
+        <div className="map-area native-map-placeholder" aria-hidden="true" />
+      ) : (
+        <KakaoMap
+          facilities={visibleFacilities}
+          location={location}
+          onBoundsChange={setMapBounds}
+          onRequestLocation={requestLocation}
+        />
+      )}
+
+      {!isRunningSessionActive && activeTab === 'home' && (
+        <header className="home-brand-card">
+          <p className="eyebrow">POLLING IN RUN</p>
         </header>
+      )}
+
+      {isAppBootLoading && (
+        <section
+          className="app-loading-screen"
+          aria-label="앱 로딩 화면"
+          aria-live="polite"
+        >
+          <div className="app-loading-logo">POLLING IN RUN</div>
+          <div className="app-loading-copy">
+            <p className="loading-label">LOADING</p>
+            <h1>달릴 준비를 하고 있어요.</h1>
+            <span>현재 위치와 지도를 연결하는 중이에요.</span>
+          </div>
+          <div className="loading-bar" aria-hidden="true">
+            <span />
+          </div>
+        </section>
+      )}
+
+      {isMapDataLoading && (
+        <section
+          className="map-loading-skeleton"
+          aria-label="지도 데이터 로딩 상태"
+          aria-live="polite"
+        >
+          <div>
+            <p className="loading-label">MAP DATA</p>
+            <strong>주변 시설을 불러오고 있어요.</strong>
+          </div>
+          <div className="skeleton-row is-wide" aria-hidden="true" />
+          <div className="skeleton-row" aria-hidden="true" />
+        </section>
       )}
 
       {!isRunningSessionActive && activeTab === 'home' && (
@@ -450,6 +931,43 @@ function App() {
         </div>
       )}
 
+      {!isRunningSessionActive &&
+        activeTab === 'home' &&
+        isNativePlatform &&
+        nativeMapMessage && (
+          <div className="native-map-status" role="status">
+            {nativeMapMessage}
+          </div>
+        )}
+
+      {!isRunningSessionActive && activeTab === 'home' && isNativePlatform && (
+        <div className="native-map-controls" aria-label="지도 제어">
+          <Button
+            type="button"
+            onClick={moveNativeMapToCurrentLocation}
+            aria-label="현재 위치로 이동"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="currentColor" />
+              <circle
+                cx="12"
+                cy="12"
+                r="8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <path
+                d="M12 2v3M12 19v3M2 12h3M19 12h3"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+          </Button>
+        </div>
+      )}
+
       {!isRunningSessionActive && activeTab === 'home' && (
         <section className={`location-card ${hasLocationError ? 'is-error' : ''}`}>
           <div>
@@ -485,8 +1003,66 @@ function App() {
 
           {runRecords.length > 0 && (
             <div className="records-layout">
+              <div className="record-controls" aria-label="러닝 기록 필터와 정렬">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={recordMemoFilter === 'all' ? 'is-active' : ''}
+                  aria-pressed={recordMemoFilter === 'all'}
+                  onClick={() => setRecordMemoFilter('all')}
+                >
+                  전체
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={recordMemoFilter === 'memo' ? 'is-active' : ''}
+                  aria-pressed={recordMemoFilter === 'memo'}
+                  onClick={() => setRecordMemoFilter('memo')}
+                >
+                  메모 있음
+                </Button>
+                <label>
+                  <span>월별</span>
+                  <select
+                    aria-label="월별 기록 필터"
+                    value={recordMonthFilter}
+                    onChange={(event) => setRecordMonthFilter(event.target.value)}
+                  >
+                    <option value="all">전체 월</option>
+                    {recordMonthOptions.map((monthKey) => (
+                      <option key={monthKey} value={monthKey}>
+                        {getRecordMonthLabel(monthKey)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>정렬</span>
+                  <select
+                    aria-label="러닝 기록 정렬"
+                    value={recordSortKey}
+                    onChange={(event) =>
+                      setRecordSortKey(event.target.value as RecordSortKey)
+                    }
+                  >
+                    <option value="date">최신순</option>
+                    <option value="distance">거리순</option>
+                    <option value="duration">시간순</option>
+                    <option value="pace">페이스순</option>
+                  </select>
+                </label>
+              </div>
+
+              {visibleRunRecords.length === 0 && (
+                <div className="records-empty is-filtered">
+                  <strong>조건에 맞는 기록이 없어요.</strong>
+                  <span>필터를 바꾸거나 전체 기록으로 다시 확인해보세요.</span>
+                </div>
+              )}
+
               <div className="record-list" aria-label="러닝 기록 목록">
-                {runRecords.map((record) => (
+                {visibleRunRecords.map((record) => (
                   <button
                     key={record.id}
                     type="button"
@@ -519,6 +1095,62 @@ function App() {
                     </div>
                   </dl>
                   <p>{selectedRecord.memo || '남긴 메모가 없어요.'}</p>
+                  <section className="record-route-preview" aria-label="기록 경로 미리보기">
+                    <strong>경로 미리보기</strong>
+                    {hasSelectedRoutePoints && isNativePlatform ? (
+                      <div
+                        ref={routePreviewRef}
+                        className="native-route-preview-map"
+                        aria-label="Apple 지도 경로 미리보기"
+                        role="img"
+                      >
+                        <span>Apple 지도에 경로를 불러오고 있어요.</span>
+                      </div>
+                    ) : selectedRoutePath ? (
+                      <svg
+                        role="img"
+                        aria-label="러닝 경로 간단 시각화"
+                        viewBox={`0 0 ${selectedRoutePath.width} ${selectedRoutePath.height}`}
+                      >
+                        <rect className="route-map-park" x="16" y="18" width="62" height="34" rx="16" />
+                        <rect className="route-map-block" x="174" y="82" width="76" height="26" rx="13" />
+                        <path className="route-map-road" d="M20 96 C72 74 108 76 150 48 S230 20 262 34" />
+                        <path className="route-map-road is-secondary" d="M54 24 C80 58 86 86 74 118" />
+                        <path className="route-map-road is-secondary" d="M134 118 C154 94 184 70 226 58" />
+                        {!selectedRoutePath.isStationary && (
+                          <path className="route-line" d={selectedRoutePath.pathData} />
+                        )}
+                        <circle
+                          className="route-start"
+                          cx={selectedRoutePath.xScale(selectedRoutePath.start.longitude)}
+                          cy={selectedRoutePath.yScale(selectedRoutePath.start.latitude)}
+                          r={selectedRoutePath.isStationary ? '7' : '4'}
+                        />
+                        {selectedRoutePath.isStationary ? (
+                          <text
+                            className="route-stationary-label"
+                            x={selectedRoutePath.width / 2}
+                            y={selectedRoutePath.height - 18}
+                            textAnchor="middle"
+                          >
+                            이동 없이 머문 기록
+                          </text>
+                        ) : (
+                          <circle
+                            className="route-end"
+                            cx={selectedRoutePath.xScale(selectedRoutePath.end.longitude)}
+                            cy={selectedRoutePath.yScale(selectedRoutePath.end.latitude)}
+                            r="4"
+                          />
+                        )}
+                      </svg>
+                    ) : (
+                      <span>
+                        저장된 경로 좌표가 없어요. 새로 저장하는 기록부터 경로를
+                        간단히 볼 수 있어요.
+                      </span>
+                    )}
+                  </section>
                   <Button
                     type="button"
                     className="record-delete-button"
@@ -537,143 +1169,243 @@ function App() {
         <section className="my-panel" aria-label="마이 페이지">
           <div>
             <p className="eyebrow">MY PAGE</p>
-            <h1>ID/PW로 기록을 이어갈 준비</h1>
+            <h1>내 iPhone에 저장하는 러닝 노트</h1>
             <p>
-              Supabase Auth로 세션을 관리하고, ID는 내부 인증 이메일로 변환해
-              처리해요.
+              지금은 로그인보다 내 기기에서 안정적으로 쓰는 local-first
+              프로토타입을 우선해요.
             </p>
           </div>
 
-          {!isSupabaseConfigured && (
-            <p className="auth-setup-notice">
-              `VITE_SUPABASE_URL`과 `VITE_SUPABASE_ANON_KEY`를 설정하면
-              실제 회원가입과 로그인을 사용할 수 있어요.
+          <section className="local-profile-card" aria-label="로컬 프로필">
+            <p className="result-label">로컬 프로필</p>
+            <h2>Solo Runner</h2>
+            <p>
+              러닝 기록은 이 기기의 로컬 저장소에 보관돼요. 앱 삭제나 브라우저
+              데이터 삭제 시 기록도 사라질 수 있어요.
             </p>
-          )}
+          </section>
 
-          {authSession ? (
-            <section className="auth-profile-card" aria-label="로그인 상태">
-              <p className="result-label">로그인됨</p>
-              <h2>{authSession.userId}</h2>
-              <p>러닝 기록을 사용자별로 분리하기 위한 세션이 준비됐어요.</p>
-              {authMessage && (
-                <p className="auth-message" role="status">
-                  {authMessage}
-                </p>
-              )}
-              <Button type="button" className="auth-submit" onClick={handleSignOut}>
-                로그아웃
-              </Button>
-              <div className="account-danger-zone">
-                <strong>회원 탈퇴</strong>
-                <span>
-                  Supabase 계정과 이 기기에 저장된 계정별 러닝 기록을 삭제해요.
-                  이 작업은 되돌릴 수 없어요.
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="account-delete-button"
-                  disabled={isDeletingAccount}
-                  onClick={handleDeleteAccount}
-                >
-                  {isDeletingAccount
-                    ? '탈퇴 처리 중'
-                    : isDeleteConfirming
-                      ? '정말 탈퇴하기'
-                      : '회원 탈퇴'}
-                </Button>
-              </div>
-            </section>
-          ) : (
-            <>
-              <div className="auth-mode-switch" aria-label="인증 모드 선택">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={authMode === 'login' ? 'is-active' : ''}
-                  aria-pressed={authMode === 'login'}
-                  onClick={() => switchAuthMode('login')}
-                >
-                  로그인
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={authMode === 'signup' ? 'is-active' : ''}
-                  aria-pressed={authMode === 'signup'}
-                  onClick={() => switchAuthMode('signup')}
-                >
-                  회원가입
-                </Button>
-              </div>
+          <section className="my-summary-grid" aria-label="러닝 기록 요약">
+            <article>
+              <span>총 러닝 횟수</span>
+              <strong>{runRecords.length}개</strong>
+            </article>
+            <article>
+              <span>총 뛴 거리</span>
+              <strong>{formatDistance(totalDistanceM)}</strong>
+            </article>
+            <article>
+              <span>최근 기록</span>
+              <strong>{latestRecordDate}</strong>
+            </article>
+            <article>
+              <span>월간 거리</span>
+              <strong>{formatDistance(monthlyDistanceM)}</strong>
+            </article>
+            <article>
+              <span>최장 러닝</span>
+              <strong>{longestRecord ? formatDistance(longestRecord.distanceM) : '0.00 km'}</strong>
+            </article>
+            <article>
+              <span>평균 페이스</span>
+              <strong>{averagePace}</strong>
+            </article>
+          </section>
 
-              <form className="auth-form" onSubmit={submitAuthForm}>
-                <h2>{authTitle}</h2>
-                <label>
-                  <span>ID</span>
-                  <input
-                    value={authUserId}
-                    onChange={(event) => changeAuthUserId(event.target.value)}
-                    autoComplete="username"
-                    placeholder="runner-id"
-                  />
-                </label>
-                {authMode === 'signup' && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="auth-secondary-action"
-                    disabled={isCheckingUserId}
-                    onClick={checkCurrentUserIdAvailability}
-                  >
-                    {isCheckingUserId ? '확인 중' : 'ID 중복 확인'}
-                  </Button>
-                )}
-                <label>
-                  <span>비밀번호</span>
-                  <input
-                    value={authPassword}
-                    onChange={(event) => setAuthPassword(event.target.value)}
-                    autoComplete={
-                      authMode === 'login' ? 'current-password' : 'new-password'
+          <section className="dashboard-section" aria-label="러닝 목표">
+            <div className="section-heading">
+              <p className="result-label">GOALS</p>
+              <h2>목표 설정과 진행률</h2>
+            </div>
+
+            <div className="goal-inputs">
+              <label>
+                <span>주간 목표</span>
+                <input
+                  aria-label="주간 목표"
+                  min="1"
+                  type="number"
+                  value={runGoals.weeklyDistanceKm}
+                  onChange={(event) =>
+                    updateRunGoal('weeklyDistanceKm', event.target.value)
+                  }
+                />
+                <em>km</em>
+              </label>
+              <label>
+                <span>월간 목표</span>
+                <input
+                  aria-label="월간 목표"
+                  min="1"
+                  type="number"
+                  value={runGoals.monthlyDistanceKm}
+                  onChange={(event) =>
+                    updateRunGoal('monthlyDistanceKm', event.target.value)
+                  }
+                />
+                <em>km</em>
+              </label>
+            </div>
+
+            <div className="progress-list" aria-label="목표 대비 진행률">
+              <article>
+                <div>
+                  <strong>이번 주</strong>
+                  <span>
+                    {formatDistance(weeklyDistanceM)} / {runGoals.weeklyDistanceKm} km
+                  </span>
+                </div>
+                <div className="progress-track">
+                  <span style={{ width: `${weeklyProgress}%` }} />
+                </div>
+                <small>{weeklyProgress}% 달성</small>
+              </article>
+              <article>
+                <div>
+                  <strong>이번 달</strong>
+                  <span>
+                    {formatDistance(monthlyDistanceM)} / {runGoals.monthlyDistanceKm} km
+                  </span>
+                </div>
+                <div className="progress-track">
+                  <span style={{ width: `${monthlyProgress}%` }} />
+                </div>
+                <small>{monthlyProgress}% 달성</small>
+              </article>
+            </div>
+          </section>
+
+          <section className="dashboard-section" aria-label="월간 거리 그래프">
+            <div className="section-heading">
+              <p className="result-label">TREND</p>
+              <h2>D3 최근 4개월 거리</h2>
+            </div>
+            <svg
+              className="distance-chart-svg"
+              role="img"
+              aria-label="최근 4개월 러닝 거리 막대 그래프"
+              viewBox={`0 0 ${distanceChartWidth} ${distanceChartHeight}`}
+            >
+              {monthlyDistanceSeries.map((item) => (
+                <g key={item.label}>
+                  <rect
+                    x={distanceXScale(item.label)}
+                    y={distanceYScale(item.distanceM)}
+                    width={distanceXScale.bandwidth()}
+                    height={
+                      distanceYScale(0) - distanceYScale(item.distanceM)
                     }
-                    type="password"
-                    placeholder="8자 이상"
+                    rx="7"
                   />
-                </label>
-                {authMode === 'signup' && (
-                  <label>
-                    <span>비밀번호 확인</span>
-                    <input
-                      value={authPasswordConfirm}
-                      onChange={(event) =>
-                        setAuthPasswordConfirm(event.target.value)
-                      }
-                      autoComplete="new-password"
-                      type="password"
-                      placeholder="비밀번호를 한 번 더 입력"
+                  <text
+                    className="chart-value-label"
+                    x={(distanceXScale(item.label) ?? 0) + distanceXScale.bandwidth() / 2}
+                    y={Math.max(12, distanceYScale(item.distanceM) - 6)}
+                    textAnchor="middle"
+                  >
+                    {(item.distanceM / 1000).toFixed(1)}
+                  </text>
+                  <text
+                    className="chart-axis-label"
+                    x={(distanceXScale(item.label) ?? 0) + distanceXScale.bandwidth() / 2}
+                    y={distanceChartHeight - 8}
+                    textAnchor="middle"
+                  >
+                    {item.label}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          </section>
+
+          <section className="dashboard-section" aria-label="목표 대비 비교 그래프">
+            <div className="section-heading">
+              <p className="result-label">COMPARE</p>
+              <h2>D3 목표 대비 비교</h2>
+            </div>
+            <svg
+              className="goal-chart-svg"
+              role="img"
+              aria-label="주간과 월간 목표 대비 실제 거리 비교 그래프"
+              viewBox={`0 0 ${goalChartWidth} ${goalChartHeight}`}
+            >
+              {goalComparisonSeries.map((item) => {
+                const y = goalYScale(item.label) ?? 0
+                const barHeight = goalYScale.bandwidth()
+
+                return (
+                  <g key={item.label}>
+                    <text
+                      className="chart-axis-label"
+                      x="8"
+                      y={y + barHeight / 2 + 4}
+                    >
+                      {item.label}
+                    </text>
+                    <rect
+                      className="goal-chart-target"
+                      x={goalChartPadding.left}
+                      y={y}
+                      width={goalXScale(item.goalKm) - goalChartPadding.left}
+                      height={barHeight}
+                      rx="7"
                     />
-                  </label>
-                )}
-                <p className="auth-help">
-                  비밀번호 찾기, 이메일 인증, 소셜 로그인은 MVP 범위에서 제외해요.
-                </p>
-                {authMessage && (
-                  <p className="auth-message" role="status">
-                    {authMessage}
-                  </p>
-                )}
-                <Button
-                  type="submit"
-                  className="auth-submit"
-                  disabled={isAuthSubmitting}
+                    <rect
+                      className="goal-chart-actual"
+                      x={goalChartPadding.left}
+                      y={y + barHeight * 0.2}
+                      width={goalXScale(item.actualKm) - goalChartPadding.left}
+                      height={barHeight * 0.6}
+                      rx="6"
+                    />
+                    <text
+                      className="chart-value-label"
+                      x={goalChartWidth - goalChartPadding.right}
+                      y={y + barHeight / 2 + 4}
+                      textAnchor="end"
+                    >
+                      {item.actualKm.toFixed(1)} / {item.goalKm}km
+                    </text>
+                  </g>
+                )
+              })}
+            </svg>
+          </section>
+
+          <section className="dashboard-section" aria-label="러닝 달력">
+            <div className="section-heading">
+              <p className="result-label">CALENDAR</p>
+              <h2>이번 달 러닝 날짜</h2>
+            </div>
+            <div className="running-calendar">
+              {runningCalendarDays.map((item) => (
+                <span
+                  key={item.day}
+                  className={item.hasRun ? 'has-run' : ''}
+                  aria-label={
+                    item.hasRun
+                      ? `${item.day}일 러닝 기록 있음`
+                      : `${item.day}일 러닝 기록 없음`
+                  }
                 >
-                  {isAuthSubmitting ? '처리 중' : authTitle}
-                </Button>
-              </form>
-            </>
-          )}
+                  {item.day}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="settings-list" aria-label="계정 기능">
+            <article className="is-planned">
+              <div>
+                <strong>로그인</strong>
+                <span>계정과 여러 기기 동기화는 local-first 흐름을 검증한 뒤 다시 연결할 예정이에요.</span>
+              </div>
+              <span className="settings-badge is-muted">
+                <span aria-hidden="true" className="settings-badge-icon">⚙</span>
+                개발 예정
+              </span>
+            </article>
+          </section>
         </section>
       )}
 
@@ -682,17 +1414,25 @@ function App() {
           className={`running-panel ${running.status === 'finished' ? 'is-result' : ''}`}
           aria-label={running.status === 'finished' ? '러닝 결과' : '러닝 진행'}
         >
+          {running.status === 'finished' && (
+            <Button
+              type="button"
+              className="result-close-button"
+              aria-label="러닝 결과 닫기"
+              onPointerDown={dismissFocusedControl}
+              onTouchStart={dismissFocusedControl}
+              onClick={resetRunningResult}
+            >
+              ×
+            </Button>
+          )}
           <div>
             <p className="running-eyebrow">
               {running.status === 'running' && '러닝 진행 중'}
               {running.status === 'paused' && '러닝 일시정지'}
               {running.status === 'finished' && '러닝 완료'}
             </p>
-            <h1>
-              {running.status === 'finished'
-                ? '러닝 결과를 확인해요.'
-                : '호흡을 편하게 유지해요.'}
-            </h1>
+            {running.status === 'finished' && <h1>러닝 결과를 확인해요.</h1>}
           </div>
 
           <dl className="running-metrics">
@@ -777,10 +1517,22 @@ function App() {
             )}
             {running.status === 'finished' && (
               <>
-                <Button type="button" className="secondary-action" onClick={resetRunningResult}>
+                <Button
+                  type="button"
+                  className="secondary-action"
+                  onPointerDown={dismissFocusedControl}
+                  onTouchStart={dismissFocusedControl}
+                  onClick={resetRunningResult}
+                >
                   홈으로
                 </Button>
-                <Button type="button" className="primary-action" onClick={saveRunningRecord}>
+                <Button
+                  type="button"
+                  className="primary-action"
+                  onPointerDown={dismissFocusedControl}
+                  onTouchStart={dismissFocusedControl}
+                  onClick={saveRunningRecord}
+                >
                   기록 저장
                 </Button>
               </>

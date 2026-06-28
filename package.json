@@ -4,6 +4,7 @@
   "scripts": {
     "dev:web": "npm --prefix apps/web run dev",
     "dev:api": "apps/api/.venv/bin/uvicorn app.main:app --app-dir apps/api --reload",
+    "export:facilities": "PYTHONPATH=apps/api apps/api/.venv/bin/python apps/api/scripts/export_facilities_json.py",
     "test:web": "npm --prefix apps/web run test",
     "test:api": "apps/api/.venv/bin/pytest apps/api",
     "build:web": "npm --prefix apps/web run build",

@@ -16,6 +16,7 @@
 ## 단점과 위험
 
 - 화면이 꺼지거나 브라우저가 백그라운드로 이동하면 추적이 중단될 수 있다.
+- Capacitor WebView에서도 별도 native background location 구현 없이는 다른 앱 사용 중 기록을 안정적으로 보장하기 어렵다.
 - GPS 오차로 실제보다 긴 경로가 기록될 수 있다.
 - 지속적인 고정밀 위치 추적은 배터리를 많이 사용한다.
 
@@ -46,9 +47,15 @@
 - 좌표 간 haversine 거리 계산으로 누적 거리와 평균 페이스를 표시한다.
 - 모바일 브라우저에서 확인할 항목을 [`모바일 실기기 검증`](../qa/mobile-real-device-check.md) 체크리스트로 분리했다.
 
+### 2026-06-24
+
+- 현재 러닝 추적은 앱이 foreground에 있고 화면이 켜진 상태를 우선 지원 범위로 둔다.
+- 다른 앱을 사용하거나 화면이 잠긴 상태의 백그라운드 기록은 아직 구현하지 않았다.
+- 안정적인 백그라운드 기록이 필요하면 iOS native background location 권한, 별도 위치 추적 플러그인, 배터리·개인정보 안내를 함께 설계한다.
+
 ## 재검토 조건
 
-NRC나 Adidas Running 수준의 백그라운드 추적이 필수라면 React Native 또는 네이티브 앱 전환을 검토한다.
+NRC나 Adidas Running 수준의 백그라운드 추적이 필수라면 Capacitor native plugin, React Native, 또는 네이티브 앱 전환을 검토한다.
 
 ## 완료 조건
 

@@ -21,6 +21,7 @@ def configure_supabase_admin(monkeypatch) -> None:
 
 
 def test_user_id_availability_requires_admin_env(monkeypatch) -> None:
+    monkeypatch.setenv("POLLING_IN_RUN_SKIP_DOTENV", "1")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
 
