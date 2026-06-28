@@ -178,6 +178,30 @@ def test_list_facilities_filters_by_map_bounds(monkeypatch) -> None:
     assert [facility["id"] for facility in facilities] == ["restroom-sample-1"]
 
 
+def test_list_facilities_bounds_are_not_limited_by_current_location_radius(monkeypatch) -> None:
+    use_sample_facilities(monkeypatch)
+
+    response = client.get(
+        "/api/facilities",
+        params={
+            "latitude": 37.5665,
+            "longitude": 126.9780,
+            "radius_m": 100,
+            "min_lat": 37.555,
+            "max_lat": 37.558,
+            "min_lng": 126.985,
+            "max_lng": 126.987,
+        },
+    )
+
+    assert response.status_code == 200
+
+    facilities = response.json()
+
+    assert [facility["id"] for facility in facilities] == ["water-sample-2"]
+    assert facilities[0]["distance_m"] > 100
+
+
 def test_list_facilities_requires_complete_location(monkeypatch) -> None:
     use_sample_facilities(monkeypatch)
 
