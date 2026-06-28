@@ -77,6 +77,7 @@ function isInsideBounds(facility: Facility, bounds?: FacilityBounds | null) {
 }
 
 function applyLocalFacilityQuery(facilities: Facility[], query: FacilityQuery) {
+  const hasBounds = query.bounds !== undefined && query.bounds !== null
   const boundedFacilities = facilities.filter((facility) =>
     isInsideBounds(facility, query.bounds),
   )
@@ -85,9 +86,7 @@ function applyLocalFacilityQuery(facilities: Facility[], query: FacilityQuery) {
     return boundedFacilities
   }
 
-  const radiusM = query.radiusM ?? 3000
-
-  return boundedFacilities
+  const facilitiesWithDistance = boundedFacilities
     .map((facility) => ({
       ...facility,
       distance_m: calculateDistanceM(
@@ -97,8 +96,15 @@ function applyLocalFacilityQuery(facilities: Facility[], query: FacilityQuery) {
         facility.longitude,
       ),
     }))
-    .filter((facility) => facility.distance_m <= radiusM)
     .sort((a, b) => (a.distance_m ?? 0) - (b.distance_m ?? 0))
+
+  if (hasBounds) {
+    return facilitiesWithDistance
+  }
+
+  const radiusM = query.radiusM ?? 3000
+
+  return facilitiesWithDistance.filter((facility) => facility.distance_m <= radiusM)
 }
 
 async function getLocalFacilities(query: FacilityQuery) {
@@ -119,7 +125,10 @@ async function getApiFacilities(query: FacilityQuery) {
   if (query.latitude !== undefined && query.longitude !== undefined) {
     searchParams.set('latitude', String(query.latitude))
     searchParams.set('longitude', String(query.longitude))
-    searchParams.set('radius_m', String(query.radiusM ?? 3000))
+
+    if (!query.bounds) {
+      searchParams.set('radius_m', String(query.radiusM ?? 3000))
+    }
   }
 
   if (query.bounds) {
