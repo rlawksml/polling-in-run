@@ -637,11 +637,20 @@ function App() {
         }
 
         const rect = element.getBoundingClientRect()
+        const bottomNavRect = document
+          .querySelector<HTMLElement>('.bottom-nav')
+          ?.getBoundingClientRect()
+        const viewportBottom = bottomNavRect
+          ? Math.min(bottomNavRect.top - 8, window.innerHeight)
+          : window.innerHeight
+        const visibleTop = Math.max(rect.top, 0)
+        const visibleBottom = Math.min(rect.bottom, viewportBottom)
+        const visibleHeight = visibleBottom - visibleTop
         const isVisible =
           rect.width > 0 &&
-          rect.height > 0 &&
+          visibleHeight >= 48 &&
           rect.bottom > 0 &&
-          rect.top < window.innerHeight
+          rect.top < viewportBottom
 
         if (!isVisible) {
           hideRoutePreview()
@@ -651,10 +660,10 @@ function App() {
         void NativeMap.showRoutePreview({
           distanceM: selectedRecord.distanceM,
           frame: {
-            height: rect.height,
+            height: visibleHeight,
             width: rect.width,
             x: rect.left,
-            y: rect.top,
+            y: visibleTop,
           },
           points: selectedRecord.routePoints.map((point) => ({
             latitude: point.latitude,
