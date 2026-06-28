@@ -872,7 +872,8 @@ def list_facilities(
     if latitude is None or longitude is None:
         return bounded_facilities
 
-    nearby_facilities = []
+    has_bounds = all(value is not None for value in bounds_values)
+    facilities_with_distance = []
 
     for facility in bounded_facilities:
         distance_m = calculate_distance_m(
@@ -882,12 +883,12 @@ def list_facilities(
             facility.longitude,
         )
 
-        if distance_m <= radius_m:
-            nearby_facilities.append(
+        if has_bounds or distance_m <= radius_m:
+            facilities_with_distance.append(
                 facility.model_copy(update={"distance_m": distance_m})
             )
 
     return sorted(
-        nearby_facilities,
+        facilities_with_distance,
         key=lambda facility: facility.distance_m or 0,
     )
