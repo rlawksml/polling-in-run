@@ -36,6 +36,7 @@ button {
 .app-shell.is-native-map .facility-status,
 .app-shell.is-native-map .native-map-controls,
 .app-shell.is-native-map .native-map-status,
+.app-shell.is-native-map .map-research-button,
 .app-shell.is-native-map .app-loading-screen,
 .app-shell.is-native-map .map-loading-skeleton,
 .app-shell.is-native-map .location-card,
@@ -117,6 +118,23 @@ button {
 .map-controls svg {
   width: 20px;
   height: 20px;
+}
+
+.map-research-button {
+  position: absolute;
+  z-index: 3;
+  top: 210px;
+  left: 20px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  background: rgba(16, 24, 40, 0.84);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .native-map-placeholder {

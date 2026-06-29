@@ -117,6 +117,10 @@ export function KakaoMap({
     mapRef.current.setLevel(nextLevel)
   }
 
+  const searchCurrentMapArea = () => {
+    emitBoundsChange()
+  }
+
   const openKakaoDirections = (facility: Facility) => {
     const destinationName = encodeURIComponent(facility.name)
     const destination = `${destinationName},${facility.latitude},${facility.longitude}`
@@ -320,6 +324,15 @@ export function KakaoMap({
           <strong>지도를 표시할 수 없습니다.</strong>
           <span>{error}</span>
         </div>
+      )}
+      {isReady && !error && (
+        <button
+          type="button"
+          className="map-research-button"
+          onClick={searchCurrentMapArea}
+        >
+          이 지역 재검색
+        </button>
       )}
       {isReady && !error && (
         <div className="map-controls" aria-label="지도 제어">

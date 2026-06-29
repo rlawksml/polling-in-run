@@ -47,6 +47,7 @@ const NATIVE_TOUCH_AREA_SELECTORS = [
   '.facility-status',
   '.native-map-controls',
   '.native-map-status',
+  '.map-research-button',
   '.location-card',
   '.records-panel',
   '.my-panel',
@@ -794,6 +795,21 @@ function App() {
     })
   }
 
+  const searchNativeMapCurrentArea = () => {
+    void NativeMap.getBounds()
+      .then((bounds) => {
+        setMapBounds(bounds)
+        setNativeMapMessage(null)
+      })
+      .catch((error) => {
+        setNativeMapMessage(
+          error instanceof Error
+            ? error.message
+            : '현재 지도 영역을 확인하지 못했어요.',
+        )
+      })
+  }
+
   const updateRunGoal = (goalKey: keyof RunGoals, value: string) => {
     const nextGoals = {
       ...runGoals,
@@ -939,6 +955,16 @@ function App() {
             {nativeMapMessage}
           </div>
         )}
+
+      {!isRunningSessionActive && activeTab === 'home' && isNativePlatform && (
+        <Button
+          type="button"
+          className="map-research-button"
+          onClick={searchNativeMapCurrentArea}
+        >
+          이 지역 재검색
+        </Button>
+      )}
 
       {!isRunningSessionActive && activeTab === 'home' && isNativePlatform && (
         <div className="native-map-controls" aria-label="지도 제어">
