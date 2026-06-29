@@ -8,6 +8,7 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "NativeMapPlugin"
     public let jsName = "NativeMap"
     public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "getBounds", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recenter", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
@@ -73,6 +74,25 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
 
             mainViewController.recenterNativeMap(center: center)
             call.resolve()
+        }
+    }
+
+    @objc func getBounds(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            guard
+                let mainViewController = self?.bridge?.viewController as? MainViewController
+            else {
+                call.reject("MainViewController is not available")
+                return
+            }
+
+            let bounds = mainViewController.currentNativeMapBounds()
+            call.resolve([
+                "minLatitude": bounds.minLatitude,
+                "maxLatitude": bounds.maxLatitude,
+                "minLongitude": bounds.minLongitude,
+                "maxLongitude": bounds.maxLongitude
+            ])
         }
     }
 

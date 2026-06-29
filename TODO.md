@@ -10,10 +10,10 @@
 | 영역 | 진행 상태 | 현재 수준 |
 |---|---:|---|
 | M1. 지도와 현재 위치 | 10 / 10 | 카카오맵 웹 MVP와 iPhone 실기기 위치 확인 완료, iPhone 앱 지도 전략은 Apple MapKit native 우선 |
-| M2. 주변 편의시설 | 12 / 12 | 실제 시설 데이터, 지도 영역 기반 조회, 상세 카드, 길찾기, 클러스터링 완료 |
+| M2. 주변 편의시설 | 13 / 13 | 실제 시설 데이터, 지도 영역 기반 조회, 현재 영역 재검색, 상세 카드, 길찾기, 클러스터링 완료 |
 | M3. 러닝 기록 | 5 / 5 | 러닝 상태, 위치 추적, 거리·페이스, 결과 확인, 로컬 기록 저장·조회 완료 |
 | M4. 마이 페이지와 로컬 사용자 정보 | 6 / 6 | 로그인 기능은 추후 확장으로 축소, 로컬 프로필·러닝 대시보드·설정 안내 구현 완료 |
-| M5. Local-first iPhone 프로토타입 | 8 / 8 | Capacitor 설정, Apple MapKit 대체, 실기기 위치·시설·지도 조작·JSON 로딩 확인 완료 |
+| M5. Local-first iPhone 프로토타입 | 9 / 9 | Capacitor 설정, Apple MapKit 대체, 실기기 위치·시설·지도 조작·현재 영역 재검색·JSON 로딩 확인 완료 |
 | 기반 작업 | 6 / 6 | React, FastAPI, 테스트, shadcn/ui + Tailwind 기반 완료 |
 
 현재 앱은 카카오맵에서 실제 서울 공원 음수대와 실제 서울 공중화장실을 표시하며, 위치 권한을
@@ -83,6 +83,7 @@
 - [x] 화장실 XLSX 컬럼 정의서 확인 및 Git 제외 경로 정리
 - [x] 화장실 DBF 원본 수집·정규화·거리순 API 연결
 - [x] 현재 지도 영역 기반 시설 조회
+- [x] 지도 이동 후 현재 영역 재검색 버튼
 - [x] 밀집 지역 마커 클러스터링
 
 완료 조건:
@@ -199,6 +200,7 @@ MVP 제외:
 - [x] iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시 확인
 - [x] 시설 데이터 local-first 번들링 전략 1차 구현
 - [x] iPhone 실기기에서 Apple MapKit 드래그·확대/축소, 현위치 이동 버튼, 시설 마커, JSON 로딩 체감 확인
+- [x] iPhone NativeMap 현재 지도 영역 재검색 bounds bridge 구현
 
 주의점:
 
@@ -207,6 +209,7 @@ MVP 제외:
 - 시설 데이터는 `apps/web/public/data/facilities.json`에 정규화된 JSON으로 생성하며, 프론트는 이 파일을 먼저 조회한다.
 - 시설 JSON은 약 5.2MB, gzip 기준 약 389KB이며 로컬 Node 기준 평균 파싱 시간은 약 8.7ms다. iPhone 실기기에서도 빠르게 로딩되는 것을 확인했다.
 - `NativeMap`은 React가 현재 위치와 표시 중인 시설 최대 300개를 Swift embedded `MKMapView`에 동기화하는 구조로 시작했다.
+- `NativeMap.getBounds()`는 Swift `MKMapView`의 현재 화면 영역을 React로 반환하며, iPhone에서도 `이 지역 재검색` 버튼으로 현재 지도 영역 기준 시설을 다시 조회한다.
 - `NativeMap.setTouchAreas(...)`는 React UI의 버튼·카드 좌표를 Swift에 넘겨, 그 외 영역의 드래그와 핀치 줌을 native map이 받을 수 있게 한다.
 - 실기기 실행에는 Xcode 설정, 개발자 계정 로그인, iPhone 신뢰 설정이 필요할 수 있다.
 - 현재 러닝 추적은 화면이 켜지고 앱이 foreground에 있는 동안의 기록을 우선 보장한다.

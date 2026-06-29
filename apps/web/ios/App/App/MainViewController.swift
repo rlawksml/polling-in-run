@@ -22,6 +22,7 @@ final class PassthroughWebView: WKWebView {
 
 final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
     private let embeddedMapView = MKMapView()
+    private var hasSetInitialEmbeddedRegion = false
     private var routePreviewMapView: MKMapView?
 
     override func capacitorDidLoad() {
@@ -32,12 +33,15 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
     }
 
     func updateNativeMap(center: CLLocationCoordinate2D, facilities: [NativeMapFacility]) {
-        let region = MKCoordinateRegion(
-            center: center,
-            latitudinalMeters: 3000,
-            longitudinalMeters: 3000
-        )
-        embeddedMapView.setRegion(region, animated: false)
+        if !hasSetInitialEmbeddedRegion {
+            let region = MKCoordinateRegion(
+                center: center,
+                latitudinalMeters: 3000,
+                longitudinalMeters: 3000
+            )
+            embeddedMapView.setRegion(region, animated: false)
+            hasSetInitialEmbeddedRegion = true
+        }
 
         let facilityAnnotations = embeddedMapView.annotations.compactMap {
             $0 as? FacilityAnnotation
@@ -50,6 +54,25 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
 
     func recenterNativeMap(center: CLLocationCoordinate2D) {
         embeddedMapView.setCenter(center, animated: true)
+        hasSetInitialEmbeddedRegion = true
+    }
+
+    func currentNativeMapBounds() -> (
+        minLatitude: Double,
+        maxLatitude: Double,
+        minLongitude: Double,
+        maxLongitude: Double
+    ) {
+        let region = embeddedMapView.region
+        let halfLatitudeDelta = region.span.latitudeDelta / 2
+        let halfLongitudeDelta = region.span.longitudeDelta / 2
+
+        return (
+            minLatitude: region.center.latitude - halfLatitudeDelta,
+            maxLatitude: region.center.latitude + halfLatitudeDelta,
+            minLongitude: region.center.longitude - halfLongitudeDelta,
+            maxLongitude: region.center.longitude + halfLongitudeDelta
+        )
     }
 
     func updateNativeTouchAreas(_ areas: [CGRect]) {

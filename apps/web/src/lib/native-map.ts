@@ -25,7 +25,15 @@ export type NativeMapFrame = {
   y: number
 }
 
+export type NativeMapBounds = {
+  maxLatitude: number
+  maxLongitude: number
+  minLatitude: number
+  minLongitude: number
+}
+
 type NativeMapPlugin = {
+  getBounds(): Promise<NativeMapBounds>
   open(options: {
     center: {
       latitude: number
