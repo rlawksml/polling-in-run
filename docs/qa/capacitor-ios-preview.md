@@ -51,7 +51,7 @@ VITE_API_BASE_URL=http://192.168.45.3:8000
 - [x] Apple MapKit native 구현 경로를 문서화했다.
 - [x] Xcode에서 NativeMap plugin과 Swift embedded 지도 초안을 추가한다.
 - [x] React UI의 버튼·카드 영역만 WebView가 터치받고 나머지는 embedded MapKit으로 넘기는 touch pass-through를 추가한다.
-- [x] 홈 화면 상단 MY 버튼을 제거하고 브랜드 문구를 Dynamic Island 아래 카드로 재배치한다.
+- [x] 홈 화면 상단 MY 버튼과 브랜드 문구를 제거하고 우측 상단에 현위치 이동 버튼을 배치한다.
 - [x] embedded Native MapKit을 현재 위치로 다시 이동시키는 홈 지도 컨트롤을 추가한다.
 - [x] 현재 위치 권한 요청이 표시된다.
 - [x] 현재 위치 마커가 표시된다.

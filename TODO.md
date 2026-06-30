@@ -196,7 +196,7 @@ MVP 제외:
 - [x] Apple MapKit native 구현 경로 문서화
 - [x] NativeMap Capacitor plugin 초안 추가
 - [x] WebView overlay의 버튼·카드 영역만 터치받고 나머지는 embedded MapKit으로 넘기는 touch pass-through 구현
-- [x] iPhone 홈 화면의 MY 상단 버튼 제거, 브랜드 카드 재배치, native 현위치 이동 버튼 추가
+- [x] iPhone 홈 화면의 MY 상단 버튼과 브랜드 카드 제거, 우측 상단 native 현위치 이동 버튼 배치
 - [x] iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커 표시 확인
 - [x] 시설 데이터 local-first 번들링 전략 1차 구현
 - [x] iPhone 실기기에서 Apple MapKit 드래그·확대/축소, 현위치 이동 버튼, 시설 마커, JSON 로딩 체감 확인

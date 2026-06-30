@@ -40,7 +40,6 @@ const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
 const APP_BOOT_MIN_LOADING_MS = 2000
 const NATIVE_MAP_FACILITY_LIMIT = 300
 const NATIVE_TOUCH_AREA_SELECTORS = [
-  '.home-brand-card',
   '.app-loading-screen',
   '.map-loading-skeleton',
   '.facility-filter',
@@ -869,12 +868,6 @@ function App() {
           onBoundsChange={setMapBounds}
           onRequestLocation={requestLocation}
         />
-      )}
-
-      {!isRunningSessionActive && activeTab === 'home' && (
-        <header className="home-brand-card">
-          <p className="eyebrow">POLLING IN RUN</p>
-        </header>
       )}
 
       {isAppBootLoading && (

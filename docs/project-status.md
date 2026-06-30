@@ -157,7 +157,7 @@ xcodebuild -project apps/web/ios/App/App.xcodeproj -scheme App -configuration De
 
 - NativeMap Capacitor plugin 초안은 추가했다.
 - React UI 좌표 기반 WebView touch pass-through를 추가했다.
-- 홈 화면 상단 MY 버튼은 제거하고, 브랜드 문구는 Dynamic Island와 겹치지 않는 카드로 재배치했다.
+- 홈 화면 상단 MY 버튼과 브랜드 카드는 제거하고, 우측 상단을 현위치 이동 버튼으로 바꿨다.
 - NativeMap recenter bridge를 추가해 iPhone 홈 화면에서 현재 위치로 다시 이동할 수 있게 했다.
 - 앱 초기 로딩 화면, 시설 데이터 스켈레톤, 마이 페이지 단일 화면 배경 처리를 추가했다.
 - iPhone 실기기에서 위치 권한, 현재 위치 마커, 시설 마커, Apple MapKit 드래그·확대/축소, 현위치 이동 버튼을 확인했다.
