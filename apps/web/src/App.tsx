@@ -761,9 +761,14 @@ function App() {
     nativeFacilities,
   ])
 
-  const appShellClassName = isNativePlatform
-    ? 'app-shell is-native-map'
-    : 'app-shell'
+  const isStandaloneTab = !isRunningSessionActive && activeTab !== 'home'
+  const appShellClassName = [
+    'app-shell',
+    isNativePlatform ? 'is-native-map' : '',
+    isStandaloneTab ? 'is-standalone-page' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <main className={appShellClassName}>
