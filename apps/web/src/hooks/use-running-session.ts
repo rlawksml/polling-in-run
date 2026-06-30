@@ -36,8 +36,8 @@ const initialSession: RunningSession = {
 }
 
 const MAX_TRACKING_ACCURACY_M = 80
-const MIN_TRACKING_DISTANCE_M = 2
-const ROUTE_SAMPLING_INTERVAL_MS = 3000
+const MIN_TRACKING_DISTANCE_M = 0.75
+const ROUTE_SAMPLING_INTERVAL_MS = 1000
 const EARTH_RADIUS_M = 6371000
 
 function getTrackingStartState(): Pick<
