@@ -170,7 +170,7 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 - React는 `NativeMap.setTouchAreas(...)`로 버튼, 카드, 탭바의 viewport 좌표를 Swift에 넘긴다.
 - Swift `PassthroughWebView`는 해당 좌표 안에서는 WebView 터치를 유지하고, 그 밖의 영역은 embedded `MKMapView`가 드래그와 핀치 줌을 받을 수 있게 넘긴다.
 - 기록 상세에서는 React가 경로 프리뷰 영역의 viewport 좌표와 저장된 GPS 포인트를 `NativeMap.showRoutePreview(...)`로 넘긴다.
-- Swift는 해당 영역 위에 작은 `MKMapView`를 올리고, `MKPolyline`으로 러닝 경로를 실제 Apple 지도 위에 표시한다.
+- Swift는 해당 영역 크기에 맞는 Apple MapKit snapshot 이미지를 생성하고, 저장된 GPS 포인트 전체를 그 위에 경로로 그려 고정 미리보기처럼 표시한다.
 - Xcode simulator build 기준으로 Swift 컴파일과 앱 빌드를 통과했다.
 
 ## 남은 확인

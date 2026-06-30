@@ -232,7 +232,7 @@ MVP 제외:
 - [x] 시설 데이터 JSON 번들링
 - [x] 마이 페이지 러닝 대시보드 1차 구현: 총 거리, 목표 설정, 달력, D3 그래프
 - [x] 기록 페이지 필터와 정렬 1차 구현: 메모 있음, 월별, 거리·시간·페이스 정렬
-- [x] 기록 상세 경로 미리보기: iPhone Apple MapKit polyline, 웹 SVG fallback
+- [x] 기록 상세 경로 미리보기: iPhone Apple MapKit snapshot 이미지 + GPS 경로, 웹 SVG fallback
 - [x] NativeMap Capacitor plugin 초안 추가
 - [ ] 기록 페이지 사용감 polish: 필터 레이아웃, 경로 미리보기 라벨, empty state
 - [ ] Supabase PostgreSQL 연결은 멀티 디바이스 동기화가 필요해질 때 재검토
