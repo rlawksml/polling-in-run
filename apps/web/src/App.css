@@ -22,6 +22,10 @@ button {
   background: transparent;
 }
 
+.app-shell.is-native-map.is-standalone-page {
+  background: #f8fafc;
+}
+
 .app-shell.is-native-map {
   pointer-events: none;
 }
@@ -818,26 +822,29 @@ button {
 
 .records-panel {
   position: absolute;
-  z-index: 3;
-  right: 16px;
-  bottom: calc(82px + env(safe-area-inset-bottom));
-  left: 16px;
+  z-index: 12;
+  top: 0;
+  right: 0;
+  bottom: calc(62px + env(safe-area-inset-bottom));
+  left: 0;
   display: grid;
-  max-height: 66vh;
+  align-content: start;
   gap: 16px;
-  padding: 18px;
+  padding: calc(22px + env(safe-area-inset-top)) 18px 24px;
   overflow: auto;
-  border: 1px solid rgba(16, 24, 40, 0.1);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 22px 60px rgba(16, 24, 40, 0.2);
-  backdrop-filter: blur(16px);
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 32%),
+    #f8fafc;
+  box-shadow: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .records-panel h1 {
   margin: 0;
   color: #101828;
-  font-size: 1.25rem;
+  font-size: 1.65rem;
   letter-spacing: -0.04em;
 }
 
@@ -951,6 +958,7 @@ button {
   display: grid;
   gap: 12px;
   padding: 16px;
+  overflow: hidden;
   border-radius: 18px;
   background: #101828;
   color: #ffffff;
@@ -997,6 +1005,7 @@ button {
   display: grid;
   gap: 8px;
   padding: 12px;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.06);
@@ -1014,7 +1023,10 @@ button {
 }
 
 .record-route-preview svg {
+  display: block;
   width: 100%;
+  height: auto;
+  max-height: 260px;
   border-radius: 14px;
   background:
     linear-gradient(rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.34)),
