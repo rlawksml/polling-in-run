@@ -542,12 +542,16 @@ describe('App', () => {
 
     expect(screen.getByLabelText('러닝 경로')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '메모 있음' }))
+    fireEvent.change(screen.getByLabelText('메모 검색'), {
+      target: { value: '한강' },
+    })
 
     expect(screen.getByText('한강 다리 옆')).toBeInTheDocument()
     expect(screen.queryByText('3.20 km')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '전체' }))
+    fireEvent.change(screen.getByLabelText('메모 검색'), {
+      target: { value: '' },
+    })
     fireEvent.change(screen.getByLabelText('월별 기록 필터'), {
       target: { value: '2026-05' },
     })

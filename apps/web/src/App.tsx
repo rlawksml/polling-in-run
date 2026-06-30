@@ -60,7 +60,6 @@ const DEFAULT_RUN_GOALS = {
 }
 
 type AppTab = 'home' | 'records' | 'my'
-type RecordMemoFilter = 'all' | 'memo'
 type RecordSortKey = 'date' | 'distance' | 'duration' | 'pace'
 
 type RunRecord = {
@@ -245,13 +244,15 @@ function getSortedRecords(records: RunRecord[], sortKey: RecordSortKey) {
 
 function getVisibleRecords(
   records: RunRecord[],
-  memoFilter: RecordMemoFilter,
+  memoQuery: string,
   monthFilter: string,
   sortKey: RecordSortKey,
 ) {
+  const normalizedMemoQuery = memoQuery.trim().toLocaleLowerCase()
   const filteredRecords = records.filter((record) => {
     const matchesMemo =
-      memoFilter === 'all' || (record.memo?.trim().length ?? 0) > 0
+      normalizedMemoQuery.length === 0 ||
+      record.memo?.toLocaleLowerCase().includes(normalizedMemoQuery)
     const matchesMonth =
       monthFilter === 'all' || getRecordMonthKey(record) === monthFilter
 
@@ -328,8 +329,7 @@ function App() {
   const [recordSaveMessage, setRecordSaveMessage] = useState<string | null>(null)
   const [isBootSplashVisible, setIsBootSplashVisible] = useState(true)
   const [activeTab, setActiveTab] = useState<AppTab>('home')
-  const [recordMemoFilter, setRecordMemoFilter] =
-    useState<RecordMemoFilter>('all')
+  const [recordMemoQuery, setRecordMemoQuery] = useState('')
   const [recordMonthFilter, setRecordMonthFilter] = useState('all')
   const [recordSortKey, setRecordSortKey] = useState<RecordSortKey>('date')
   const [routeSnapshots, setRouteSnapshots] = useState<Record<string, string>>({})
@@ -410,7 +410,7 @@ function App() {
   const recordMonthOptions = getRecordMonthOptions(runRecords)
   const visibleRunRecords = getVisibleRecords(
     runRecords,
-    recordMemoFilter,
+    recordMemoQuery,
     recordMonthFilter,
     recordSortKey,
   )
@@ -642,7 +642,7 @@ function App() {
     isNativePlatform,
     isRunningSessionActive,
     nativeMapMessage,
-    recordMemoFilter,
+    recordMemoQuery,
     recordMonthFilter,
     recordSortKey,
     runRecords.length,
@@ -992,24 +992,16 @@ function App() {
           {runRecords.length > 0 && (
             <div className="records-layout">
               <div className="record-controls" aria-label="러닝 기록 필터와 정렬">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={recordMemoFilter === 'all' ? 'is-active' : ''}
-                  aria-pressed={recordMemoFilter === 'all'}
-                  onClick={() => setRecordMemoFilter('all')}
-                >
-                  전체
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={recordMemoFilter === 'memo' ? 'is-active' : ''}
-                  aria-pressed={recordMemoFilter === 'memo'}
-                  onClick={() => setRecordMemoFilter('memo')}
-                >
-                  메모 있음
-                </Button>
+                <label className="record-search-field">
+                  <span>메모 검색</span>
+                  <input
+                    aria-label="메모 검색"
+                    placeholder="예: 한강, 점심 운동"
+                    type="search"
+                    value={recordMemoQuery}
+                    onChange={(event) => setRecordMemoQuery(event.target.value)}
+                  />
+                </label>
                 <label>
                   <span>월별</span>
                   <select

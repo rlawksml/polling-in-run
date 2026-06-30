@@ -873,7 +873,6 @@ button {
   gap: 8px;
 }
 
-.record-controls button,
 .record-controls label {
   min-height: 42px;
   border: 1px solid rgba(16, 24, 40, 0.08);
@@ -881,16 +880,8 @@ button {
   background: #f8fafc;
 }
 
-.record-controls button {
-  color: #667085;
-  font-size: 0.76rem;
-  font-weight: 900;
-}
-
-.record-controls button.is-active {
-  border-color: rgba(37, 99, 235, 0.3);
-  background: #eff6ff;
-  color: #175cd3;
+.record-search-field {
+  grid-column: 1 / -1;
 }
 
 .record-controls label {
@@ -905,6 +896,7 @@ button {
   font-weight: 900;
 }
 
+.record-controls input,
 .record-controls select {
   width: 100%;
   border: 0;
@@ -914,6 +906,10 @@ button {
   font-size: 0.76rem;
   font-weight: 900;
   outline: 0;
+}
+
+.record-controls input::placeholder {
+  color: #98a2b3;
 }
 
 .records-empty.is-filtered {
