@@ -13,6 +13,11 @@ export type NativeMapTouchArea = {
   y: number
 }
 
+export type NativeMapRoutePoint = {
+  latitude: number
+  longitude: number
+}
+
 export type NativeMapBounds = {
   maxLatitude: number
   maxLongitude: number
@@ -21,6 +26,14 @@ export type NativeMapBounds = {
 }
 
 type NativeMapPlugin = {
+  createRouteSnapshot(options: {
+    distanceM: number
+    height: number
+    points: NativeMapRoutePoint[]
+    width: number
+  }): Promise<{
+    imageDataUrl: string
+  }>
   getBounds(): Promise<NativeMapBounds>
   open(options: {
     center: {

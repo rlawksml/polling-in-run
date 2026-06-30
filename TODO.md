@@ -234,6 +234,7 @@ MVP 제외:
 - [x] 기록 페이지 필터와 정렬 1차 구현: 메모 있음, 월별, 거리·시간·페이스 정렬
 - [x] 기록 상세 경로: 카드 내부 SVG 경로 렌더링과 GPS 포인트 수집 보강
 - [x] 기록 탭 독립 페이지 전환: 지도 위 floating panel이 아니라 전체 기록 페이지로 표시
+- [x] iPhone 기록 상세 경로를 Apple MapKit snapshot 이미지로 표시
 - [x] NativeMap Capacitor plugin 초안 추가
 - [ ] 기록 페이지 사용감 polish: 필터 레이아웃, 경로 라벨, empty state
 - [ ] Supabase PostgreSQL 연결은 멀티 디바이스 동기화가 필요해질 때 재검토

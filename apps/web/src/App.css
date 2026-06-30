@@ -1022,12 +1022,36 @@ button {
   line-height: 1.45;
 }
 
+.route-snapshot-image,
 .record-route-preview svg {
   display: block;
   width: 100%;
   height: auto;
   max-height: 260px;
   border-radius: 14px;
+}
+
+.route-snapshot-image {
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  background: #eef3ec;
+}
+
+.route-snapshot-loading {
+  display: grid;
+  min-height: 132px;
+  place-items: center;
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 255, 0.08);
+  color: #d0d5dd;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.record-route-preview svg {
   background:
     linear-gradient(rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.34)),
     repeating-linear-gradient(

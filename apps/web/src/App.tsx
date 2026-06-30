@@ -332,6 +332,8 @@ function App() {
     useState<RecordMemoFilter>('all')
   const [recordMonthFilter, setRecordMonthFilter] = useState('all')
   const [recordSortKey, setRecordSortKey] = useState<RecordSortKey>('date')
+  const [routeSnapshots, setRouteSnapshots] = useState<Record<string, string>>({})
+  const [loadingRouteSnapshotId, setLoadingRouteSnapshotId] = useState<string | null>(null)
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
     readRunRecords(RUN_RECORDS_STORAGE_KEY),
   )
@@ -485,6 +487,11 @@ function App() {
   const selectedRoutePath = selectedRecord?.routePoints
     ? getRoutePathData(selectedRecord.routePoints, selectedRecord.distanceM)
     : null
+  const selectedRouteSnapshot = selectedRecord
+    ? routeSnapshots[selectedRecord.id]
+    : undefined
+  const isRouteSnapshotLoading =
+    selectedRecord !== null && loadingRouteSnapshotId === selectedRecord.id
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -503,6 +510,55 @@ function App() {
       document.body.classList.remove('is-native-map')
     }
   }, [isNativePlatform])
+
+  useEffect(() => {
+    if (
+      !isNativePlatform ||
+      activeTab !== 'records' ||
+      !selectedRecord?.routePoints?.length ||
+      routeSnapshots[selectedRecord.id]
+    ) {
+      return
+    }
+
+    let isCanceled = false
+    const loadingTimerId = window.setTimeout(() => {
+      if (!isCanceled) {
+        setLoadingRouteSnapshotId(selectedRecord.id)
+      }
+    }, 0)
+
+    void NativeMap.createRouteSnapshot({
+      distanceM: selectedRecord.distanceM,
+      height: 360,
+      points: selectedRecord.routePoints.map((point) => ({
+        latitude: point.latitude,
+        longitude: point.longitude,
+      })),
+      width: 720,
+    })
+      .then(({ imageDataUrl }) => {
+        if (isCanceled) {
+          return
+        }
+
+        setRouteSnapshots((current) => ({
+          ...current,
+          [selectedRecord.id]: imageDataUrl,
+        }))
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!isCanceled) {
+          setLoadingRouteSnapshotId(null)
+        }
+      })
+
+    return () => {
+      isCanceled = true
+      window.clearTimeout(loadingTimerId)
+    }
+  }, [activeTab, isNativePlatform, routeSnapshots, selectedRecord])
 
   useLayoutEffect(() => {
     if (!isNativePlatform) {
@@ -1029,7 +1085,17 @@ function App() {
                   <p>{selectedRecord.memo || '남긴 메모가 없어요.'}</p>
                   <section className="record-route-preview" aria-label="기록 경로">
                     <strong>경로</strong>
-                    {selectedRoutePath ? (
+                    {selectedRouteSnapshot ? (
+                      <img
+                        alt="Apple 지도 위에 표시한 러닝 경로"
+                        className="route-snapshot-image"
+                        src={selectedRouteSnapshot}
+                      />
+                    ) : isRouteSnapshotLoading ? (
+                      <div className="route-snapshot-loading" role="status">
+                        Apple 지도로 경로 이미지를 만들고 있어요.
+                      </div>
+                    ) : selectedRoutePath ? (
                       <svg
                         role="img"
                         aria-label="러닝 경로"

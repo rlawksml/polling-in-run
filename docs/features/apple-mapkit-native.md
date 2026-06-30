@@ -169,6 +169,9 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 - React는 현재 표시 중인 시설을 최대 300개까지만 native 화면으로 넘긴다.
 - React는 `NativeMap.setTouchAreas(...)`로 버튼, 카드, 탭바의 viewport 좌표를 Swift에 넘긴다.
 - Swift `PassthroughWebView`는 해당 좌표 안에서는 WebView 터치를 유지하고, 그 밖의 영역은 embedded `MKMapView`가 드래그와 핀치 줌을 받을 수 있게 넘긴다.
+- 기록 상세에서는 React가 저장된 GPS 포인트를 `NativeMap.createRouteSnapshot(...)`으로 넘긴다.
+- Swift는 `MKMapSnapshotter`로 Apple 지도 이미지를 만들고, 저장된 GPS 경로와 시작·종료 마커, km 라벨을 그린 PNG data URL을 React로 반환한다.
+- React는 이 이미지를 카드 내부 `img`로 표시하므로 native view가 기록 콘텐츠 밖으로 빠져나가지 않는다.
 - Xcode simulator build 기준으로 Swift 컴파일과 앱 빌드를 통과했다.
 
 ## 남은 확인
