@@ -12,8 +12,7 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recenter", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setTouchAreas", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "showRoutePreview", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setTouchAreas", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func open(_ call: CAPPluginCall) {
@@ -113,29 +112,6 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    @objc func showRoutePreview(_ call: CAPPluginCall) {
-        let pointPayloads = call.getArray("points", JSObject.self) ?? []
-        let points = pointPayloads.compactMap(parseRoutePoint)
-        let frame = call.getObject("frame").flatMap { parseFrame($0) }
-        let distanceM = call.getDouble("distanceM") ?? 0
-
-        DispatchQueue.main.async { [weak self] in
-            guard
-                let mainViewController = self?.bridge?.viewController as? MainViewController
-            else {
-                call.reject("MainViewController is not available")
-                return
-            }
-
-            mainViewController.updateRoutePreview(
-                frame: frame,
-                points: points,
-                distanceM: distanceM
-            )
-            call.resolve()
-        }
-    }
-
     private func parseMapPayload(_ call: CAPPluginCall) -> (
         center: CLLocationCoordinate2D,
         facilities: [NativeMapFacility]
@@ -199,29 +175,5 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         return CGRect(x: x, y: y, width: width, height: height)
-    }
-
-    private func parseFrame(_ payload: JSObject) -> CGRect? {
-        guard
-            let x = payload["x"] as? Double,
-            let y = payload["y"] as? Double,
-            let width = payload["width"] as? Double,
-            let height = payload["height"] as? Double
-        else {
-            return nil
-        }
-
-        return CGRect(x: x, y: y, width: width, height: height)
-    }
-
-    private func parseRoutePoint(_ payload: JSObject) -> CLLocationCoordinate2D? {
-        guard
-            let latitude = payload["latitude"] as? Double,
-            let longitude = payload["longitude"] as? Double
-        else {
-            return nil
-        }
-
-        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }

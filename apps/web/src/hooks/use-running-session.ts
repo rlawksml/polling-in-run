@@ -36,6 +36,8 @@ const initialSession: RunningSession = {
 }
 
 const MAX_TRACKING_ACCURACY_M = 80
+const MIN_TRACKING_DISTANCE_M = 2
+const ROUTE_SAMPLING_INTERVAL_MS = 3000
 const EARTH_RADIUS_M = 6371000
 
 function getTrackingStartState(): Pick<
@@ -107,6 +109,37 @@ export function calculateDistanceM(
   return EARTH_RADIUS_M * 2 * Math.asin(Math.sqrt(haversine))
 }
 
+function appendRoutePoint(
+  current: RunningSession,
+  nextPoint: RunLocationPoint,
+): RunningSession {
+  const lastPoint = current.routePoints[current.routePoints.length - 1]
+
+  if (!lastPoint) {
+    return {
+      ...current,
+      routePoints: [nextPoint],
+      trackingError: null,
+    }
+  }
+
+  const distanceFromLastPoint = calculateDistanceM(lastPoint, nextPoint)
+
+  if (distanceFromLastPoint < MIN_TRACKING_DISTANCE_M) {
+    return {
+      ...current,
+      trackingError: null,
+    }
+  }
+
+  return {
+    ...current,
+    distanceM: current.distanceM + distanceFromLastPoint,
+    routePoints: [...current.routePoints, nextPoint],
+    trackingError: null,
+  }
+}
+
 export function useRunningSession() {
   const [session, setSession] = useState<RunningSession>(initialSession)
   const [now, setNow] = useState(() => Date.now())
@@ -143,39 +176,29 @@ export function useRunningSession() {
       return
     }
 
-    const watchId = navigator.geolocation.watchPosition(
-      ({ coords, timestamp }) => {
-        if (coords.accuracy > MAX_TRACKING_ACCURACY_M) {
-          setSession((current) => ({
-            ...current,
-            trackingError: `GPS 정확도가 낮아 이번 좌표는 제외했어요. (${Math.round(
-              coords.accuracy,
-            )}m)`,
-          }))
-          return
-        }
-
-        const nextPoint = {
-          accuracy: coords.accuracy,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          timestamp,
-        }
-
+    const handlePosition = ({ coords, timestamp }: GeolocationPosition) => {
+      if (coords.accuracy > MAX_TRACKING_ACCURACY_M) {
         setSession((current) => ({
           ...current,
-          distanceM:
-            current.routePoints.length > 0
-              ? current.distanceM +
-                calculateDistanceM(
-                  current.routePoints[current.routePoints.length - 1],
-                  nextPoint,
-                )
-              : current.distanceM,
-          routePoints: [...current.routePoints, nextPoint],
-          trackingError: null,
+          trackingError: `GPS 정확도가 낮아 이번 좌표는 제외했어요. (${Math.round(
+            coords.accuracy,
+          )}m)`,
         }))
-      },
+        return
+      }
+
+      const nextPoint = {
+        accuracy: coords.accuracy,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        timestamp,
+      }
+
+      setSession((current) => appendRoutePoint(current, nextPoint))
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      handlePosition,
       (error) => {
         setSession((current) => ({
           ...current,
@@ -186,13 +209,25 @@ export function useRunningSession() {
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 1000,
+        maximumAge: 0,
         timeout: 10000,
       },
     )
+    const samplingTimerId = window.setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        handlePosition,
+        () => undefined,
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 8000,
+        },
+      )
+    }, ROUTE_SAMPLING_INTERVAL_MS)
 
     return () => {
       navigator.geolocation.clearWatch(watchId)
+      window.clearInterval(samplingTimerId)
     }
   }, [session.status, session.trackingStatus])
 

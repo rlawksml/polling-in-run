@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { extent, line, max, scaleBand, scaleLinear } from 'd3'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import {
   getFacilities,
   type FacilityBounds,
@@ -320,7 +320,6 @@ function getRoutePathData(points: RunLocationPoint[], distanceM: number) {
 
 function App() {
   const isNativePlatform = Capacitor.isNativePlatform()
-  const routePreviewRef = useRef<HTMLDivElement | null>(null)
   const { location, requestLocation, status } = useCurrentLocation()
   const running = useRunningSession()
   const [mapBounds, setMapBounds] = useState<FacilityBounds | null>(null)
@@ -486,8 +485,6 @@ function App() {
   const selectedRoutePath = selectedRecord?.routePoints
     ? getRoutePathData(selectedRecord.routePoints, selectedRecord.distanceM)
     : null
-  const selectedRoutePoints = selectedRecord?.routePoints ?? []
-  const hasSelectedRoutePoints = selectedRoutePoints.length > 0
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -601,95 +598,6 @@ function App() {
     visibleTypes,
   ])
 
-  useLayoutEffect(() => {
-    if (!isNativePlatform) {
-      return
-    }
-
-    let animationFrameId = 0
-    const recordsPanel = document.querySelector<HTMLElement>('.records-panel')
-
-    const hideRoutePreview = () => {
-      void NativeMap.showRoutePreview({
-        distanceM: 0,
-        frame: null,
-        points: [],
-      }).catch(() => undefined)
-    }
-
-    const syncRoutePreview = () => {
-      window.cancelAnimationFrame(animationFrameId)
-      animationFrameId = window.requestAnimationFrame(() => {
-        if (
-          activeTab !== 'records' ||
-          !selectedRecord ||
-          !selectedRecord.routePoints?.length
-        ) {
-          hideRoutePreview()
-          return
-        }
-
-        const element = routePreviewRef.current
-
-        if (!element) {
-          hideRoutePreview()
-          return
-        }
-
-        const rect = element.getBoundingClientRect()
-        const bottomNavRect = document
-          .querySelector<HTMLElement>('.bottom-nav')
-          ?.getBoundingClientRect()
-        const viewportBottom = bottomNavRect
-          ? Math.min(bottomNavRect.top - 8, window.innerHeight)
-          : window.innerHeight
-        const visibleTop = Math.max(rect.top, 0)
-        const visibleBottom = Math.min(rect.bottom, viewportBottom)
-        const visibleHeight = visibleBottom - visibleTop
-        const isVisible =
-          rect.width > 0 &&
-          visibleHeight >= 48 &&
-          rect.bottom > 0 &&
-          rect.top < viewportBottom
-
-        if (!isVisible) {
-          hideRoutePreview()
-          return
-        }
-
-        void NativeMap.showRoutePreview({
-          distanceM: selectedRecord.distanceM,
-          frame: {
-            height: visibleHeight,
-            width: rect.width,
-            x: rect.left,
-            y: visibleTop,
-          },
-          points: selectedRecord.routePoints.map((point) => ({
-            latitude: point.latitude,
-            longitude: point.longitude,
-          })),
-        }).catch(() => undefined)
-      })
-    }
-
-    syncRoutePreview()
-    recordsPanel?.addEventListener('scroll', syncRoutePreview)
-    window.addEventListener('resize', syncRoutePreview)
-    window.addEventListener('orientationchange', syncRoutePreview)
-    window.visualViewport?.addEventListener('resize', syncRoutePreview)
-    window.visualViewport?.addEventListener('scroll', syncRoutePreview)
-
-    return () => {
-      window.cancelAnimationFrame(animationFrameId)
-      recordsPanel?.removeEventListener('scroll', syncRoutePreview)
-      window.removeEventListener('resize', syncRoutePreview)
-      window.removeEventListener('orientationchange', syncRoutePreview)
-      window.visualViewport?.removeEventListener('resize', syncRoutePreview)
-      window.visualViewport?.removeEventListener('scroll', syncRoutePreview)
-      hideRoutePreview()
-    }
-  }, [activeTab, isNativePlatform, selectedRecord])
 
   const toggleFacilityType = (type: FacilityType) => {
     setVisibleTypes((current) =>
@@ -1114,21 +1022,12 @@ function App() {
                     </div>
                   </dl>
                   <p>{selectedRecord.memo || '남긴 메모가 없어요.'}</p>
-                  <section className="record-route-preview" aria-label="기록 경로 미리보기">
-                    <strong>경로 미리보기</strong>
-                    {hasSelectedRoutePoints && isNativePlatform ? (
-                      <div
-                        ref={routePreviewRef}
-                        className="native-route-preview-map"
-                        aria-label="Apple 지도 경로 미리보기"
-                        role="img"
-                      >
-                        <span>Apple 지도에 경로를 불러오고 있어요.</span>
-                      </div>
-                    ) : selectedRoutePath ? (
+                  <section className="record-route-preview" aria-label="기록 경로">
+                    <strong>경로</strong>
+                    {selectedRoutePath ? (
                       <svg
                         role="img"
-                        aria-label="러닝 경로 간단 시각화"
+                        aria-label="러닝 경로"
                         viewBox={`0 0 ${selectedRoutePath.width} ${selectedRoutePath.height}`}
                       >
                         <rect className="route-map-park" x="16" y="18" width="62" height="34" rx="16" />
