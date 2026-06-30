@@ -540,7 +540,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '기록' }))
 
-    expect(screen.getByLabelText('러닝 경로 간단 시각화')).toBeInTheDocument()
+    expect(screen.getByLabelText('러닝 경로')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '메모 있음' }))
 
@@ -643,7 +643,7 @@ describe('App', () => {
       expect.any(Function),
       {
         enableHighAccuracy: true,
-        maximumAge: 1000,
+        maximumAge: 0,
         timeout: 10000,
       },
     )
