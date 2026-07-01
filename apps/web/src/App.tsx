@@ -39,6 +39,7 @@ const RUN_RECORDS_STORAGE_KEY = 'polling-in-run.records.v1'
 const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
 const APP_BOOT_MIN_LOADING_MS = 2000
 const NATIVE_MAP_FACILITY_LIMIT = 300
+const RECORD_SEARCH_DEBOUNCE_MS = 250
 const NATIVE_TOUCH_AREA_SELECTORS = [
   '.app-loading-screen',
   '.map-loading-skeleton',
@@ -330,6 +331,7 @@ function App() {
   const [isBootSplashVisible, setIsBootSplashVisible] = useState(true)
   const [activeTab, setActiveTab] = useState<AppTab>('home')
   const [recordMemoQuery, setRecordMemoQuery] = useState('')
+  const [debouncedRecordMemoQuery, setDebouncedRecordMemoQuery] = useState('')
   const [recordMonthFilter, setRecordMonthFilter] = useState('all')
   const [recordSortKey, setRecordSortKey] = useState<RecordSortKey>('date')
   const [routeSnapshots, setRouteSnapshots] = useState<Record<string, string>>({})
@@ -396,6 +398,8 @@ function App() {
     [visibleFacilities],
   )
   const isRunningSessionActive = running.status !== 'idle'
+  const canShowHomeMapControls =
+    activeTab === 'home' && running.status !== 'finished'
   const isAppBootLoading =
     !isRunningSessionActive &&
     activeTab === 'home' &&
@@ -410,7 +414,7 @@ function App() {
   const recordMonthOptions = getRecordMonthOptions(runRecords)
   const visibleRunRecords = getVisibleRecords(
     runRecords,
-    recordMemoQuery,
+    debouncedRecordMemoQuery,
     recordMonthFilter,
     recordSortKey,
   )
@@ -510,6 +514,14 @@ function App() {
       document.body.classList.remove('is-native-map')
     }
   }, [isNativePlatform])
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedRecordMemoQuery(recordMemoQuery)
+    }, RECORD_SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timerId)
+  }, [recordMemoQuery])
 
   useEffect(() => {
     if (
@@ -642,6 +654,7 @@ function App() {
     isNativePlatform,
     isRunningSessionActive,
     nativeMapMessage,
+    debouncedRecordMemoQuery,
     recordMemoQuery,
     recordMonthFilter,
     recordSortKey,
@@ -872,7 +885,7 @@ function App() {
         </section>
       )}
 
-      {!isRunningSessionActive && activeTab === 'home' && (
+      {canShowHomeMapControls && (
         <section className="facility-filter" aria-label="편의시설 필터">
           <Button
             variant="outline"
@@ -901,7 +914,7 @@ function App() {
         </section>
       )}
 
-      {!isRunningSessionActive && activeTab === 'home' && (
+      {canShowHomeMapControls && (
         <div className="facility-status" aria-live="polite">
           {facilities.isPending && '시설 정보를 불러오는 중'}
           {facilities.isSuccess && `현재 영역 시설 ${visibleFacilities.length}곳 표시 중`}
@@ -909,16 +922,13 @@ function App() {
         </div>
       )}
 
-      {!isRunningSessionActive &&
-        activeTab === 'home' &&
-        isNativePlatform &&
-        nativeMapMessage && (
+      {canShowHomeMapControls && isNativePlatform && nativeMapMessage && (
           <div className="native-map-status" role="status">
             {nativeMapMessage}
           </div>
         )}
 
-      {!isRunningSessionActive && activeTab === 'home' && isNativePlatform && (
+      {canShowHomeMapControls && isNativePlatform && (
         <Button
           type="button"
           className="map-research-button"
@@ -928,7 +938,7 @@ function App() {
         </Button>
       )}
 
-      {!isRunningSessionActive && activeTab === 'home' && isNativePlatform && (
+      {canShowHomeMapControls && isNativePlatform && (
         <div className="native-map-controls" aria-label="지도 제어">
           <Button
             type="button"
@@ -956,7 +966,7 @@ function App() {
         </div>
       )}
 
-      {!isRunningSessionActive && activeTab === 'home' && (
+      {canShowHomeMapControls && (
         <section className={`location-card ${hasLocationError ? 'is-error' : ''}`}>
           <div>
             <p className="location-label">현재 위치</p>

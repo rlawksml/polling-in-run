@@ -36,7 +36,8 @@ const initialSession: RunningSession = {
 }
 
 const MAX_TRACKING_ACCURACY_M = 80
-const MIN_TRACKING_DISTANCE_M = 0.75
+const MIN_DISTANCE_ACCUMULATION_M = 0.75
+const MIN_ROUTE_POINT_DISTANCE_M = 0.15
 const ROUTE_SAMPLING_INTERVAL_MS = 1000
 const EARTH_RADIUS_M = 6371000
 
@@ -125,7 +126,7 @@ function appendRoutePoint(
 
   const distanceFromLastPoint = calculateDistanceM(lastPoint, nextPoint)
 
-  if (distanceFromLastPoint < MIN_TRACKING_DISTANCE_M) {
+  if (distanceFromLastPoint < MIN_ROUTE_POINT_DISTANCE_M) {
     return {
       ...current,
       trackingError: null,
@@ -134,7 +135,10 @@ function appendRoutePoint(
 
   return {
     ...current,
-    distanceM: current.distanceM + distanceFromLastPoint,
+    distanceM:
+      distanceFromLastPoint >= MIN_DISTANCE_ACCUMULATION_M
+        ? current.distanceM + distanceFromLastPoint
+        : current.distanceM,
     routePoints: [...current.routePoints, nextPoint],
     trackingError: null,
   }

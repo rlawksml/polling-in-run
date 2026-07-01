@@ -546,8 +546,10 @@ describe('App', () => {
       target: { value: '한강' },
     })
 
-    expect(screen.getByText('한강 다리 옆')).toBeInTheDocument()
-    expect(screen.queryByText('3.20 km')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('한강 다리 옆')).toBeInTheDocument()
+      expect(screen.queryByText('3.20 km')).not.toBeInTheDocument()
+    })
 
     fireEvent.change(screen.getByLabelText('메모 검색'), {
       target: { value: '' },
@@ -556,8 +558,10 @@ describe('App', () => {
       target: { value: '2026-05' },
     })
 
-    expect(screen.getAllByText('3.20 km').length).toBeGreaterThan(0)
-    expect(screen.queryByText('1.20 km')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getAllByText('3.20 km').length).toBeGreaterThan(0)
+      expect(screen.queryByText('1.20 km')).not.toBeInTheDocument()
+    })
 
     fireEvent.change(screen.getByLabelText('월별 기록 필터'), {
       target: { value: 'all' },
