@@ -1222,25 +1222,19 @@ button {
   gap: 4px;
 }
 
-.section-heading-with-action {
-  grid-template-columns: 1fr;
-}
-
-.section-heading-with-action > .button,
-.section-heading-with-action button {
-  justify-self: start;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 900;
-}
-
 .section-heading h2 {
   margin: 0;
   color: #101828;
   font-size: 1rem;
   letter-spacing: -0.03em;
+}
+
+.section-description {
+  margin: 0;
+  color: #667085;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .goal-inputs {
@@ -1287,53 +1281,44 @@ button {
   font-weight: 900;
 }
 
-.progress-list {
+.goal-insight-grid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
 
-.progress-list article {
+.goal-insight-grid button {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  min-height: 74px;
   padding: 12px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
   border-radius: 16px;
   background: #ffffff;
-}
-
-.progress-list article > div:first-child {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.progress-list strong {
   color: #101828;
-  font-size: 0.84rem;
+  text-align: left;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.04);
 }
 
-.progress-list span,
-.progress-list small {
+.goal-insight-grid button.is-active {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: #eff6ff;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.16);
+}
+
+.goal-insight-grid span {
   color: #667085;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 850;
 }
 
-.progress-track {
-  overflow: hidden;
-  height: 9px;
-  border-radius: 999px;
-  background: #e4e7ec;
+.goal-insight-grid strong {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 950;
 }
 
-.progress-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #2563eb, #0ea5e9);
-}
-
-.dashboard-summary-chart {
+.goal-insight-chart {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -1341,21 +1326,22 @@ button {
   background: #ffffff;
 }
 
-.dashboard-summary-chart strong {
+.goal-insight-chart strong {
   display: block;
   color: #101828;
-  font-size: 0.84rem;
+  font-size: 0.88rem;
 }
 
-.dashboard-summary-chart span {
+.goal-insight-chart span {
   color: #667085;
   font-size: 0.72rem;
   font-weight: 800;
+  line-height: 1.45;
 }
 
 .distance-chart-svg,
 .goal-chart-svg,
-.summary-chart-svg {
+.goal-insight-svg {
   width: 100%;
   border-radius: 16px;
   background: #ffffff;
@@ -1365,16 +1351,32 @@ button {
   fill: #2563eb;
 }
 
-.summary-chart-svg rect {
-  fill: #2563eb;
-}
-
 .goal-chart-target {
   fill: #dbeafe;
 }
 
 .goal-chart-actual {
   fill: #2563eb;
+}
+
+.goal-insight-axis {
+  stroke: #d0d5dd;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.goal-insight-target {
+  fill: #dbeafe;
+}
+
+.goal-insight-actual {
+  fill: #2563eb;
+}
+
+.goal-insight-marker {
+  fill: #101828;
+  stroke: #ffffff;
+  stroke-width: 2;
 }
 
 .chart-value-label {
@@ -1705,11 +1707,18 @@ button {
 }
 
 .bottom-nav button {
-  padding: 12px;
+  display: grid;
+  min-height: 52px;
+  padding: 10px;
+  place-items: center;
   background: transparent;
   color: #98a2b3;
-  font-size: 0.78rem;
-  font-weight: 800;
+}
+
+.bottom-nav svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
 }
 
 .bottom-nav button.is-active {
