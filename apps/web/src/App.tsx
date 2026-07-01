@@ -40,6 +40,10 @@ const RUN_GOALS_STORAGE_KEY = 'polling-in-run.goals.v1'
 const APP_BOOT_MIN_LOADING_MS = 2000
 const NATIVE_MAP_FACILITY_LIMIT = 300
 const RECORD_SEARCH_DEBOUNCE_MS = 250
+const ROUTE_SNAPSHOT_DEBOUNCE_MS = 350
+const ROUTE_SNAPSHOT_HEIGHT = 240
+const ROUTE_SNAPSHOT_MAX_POINTS = 320
+const ROUTE_SNAPSHOT_WIDTH = 480
 const NATIVE_TOUCH_AREA_SELECTORS = [
   '.app-loading-screen',
   '.map-loading-skeleton',
@@ -376,6 +380,22 @@ function getRoutePathData(points: RunLocationPoint[], distanceM: number) {
   }
 }
 
+function getSnapshotRoutePoints(points: RunLocationPoint[]) {
+  if (points.length <= ROUTE_SNAPSHOT_MAX_POINTS) {
+    return points
+  }
+
+  const step = Math.ceil(points.length / ROUTE_SNAPSHOT_MAX_POINTS)
+  const sampledPoints = points.filter((_, index) => index % step === 0)
+  const lastPoint = points[points.length - 1]
+
+  if (sampledPoints[sampledPoints.length - 1] !== lastPoint) {
+    sampledPoints.push(lastPoint)
+  }
+
+  return sampledPoints
+}
+
 function App() {
   const isNativePlatform = Capacitor.isNativePlatform()
   const { location, requestLocation, status } = useCurrentLocation()
@@ -666,41 +686,45 @@ function App() {
     }
 
     let isCanceled = false
-    const loadingTimerId = window.setTimeout(() => {
-      if (!isCanceled) {
-        setLoadingRouteSnapshotId(selectedRecord.id)
+    const snapshotRecord = selectedRecord
+    const snapshotRoutePoints = selectedRecord.routePoints
+    const snapshotTimerId = window.setTimeout(() => {
+      if (isCanceled) {
+        return
       }
-    }, 0)
 
-    void NativeMap.createRouteSnapshot({
-      distanceM: selectedRecord.distanceM,
-      height: 360,
-      points: selectedRecord.routePoints.map((point) => ({
-        latitude: point.latitude,
-        longitude: point.longitude,
-      })),
-      width: 720,
-    })
-      .then(({ imageDataUrl }) => {
-        if (isCanceled) {
-          return
-        }
+      setLoadingRouteSnapshotId(snapshotRecord.id)
 
-        setRouteSnapshots((current) => ({
-          ...current,
-          [selectedRecord.id]: imageDataUrl,
-        }))
+      void NativeMap.createRouteSnapshot({
+        distanceM: snapshotRecord.distanceM,
+        height: ROUTE_SNAPSHOT_HEIGHT,
+        points: getSnapshotRoutePoints(snapshotRoutePoints).map((point) => ({
+          latitude: point.latitude,
+          longitude: point.longitude,
+        })),
+        width: ROUTE_SNAPSHOT_WIDTH,
       })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!isCanceled) {
-          setLoadingRouteSnapshotId(null)
-        }
-      })
+        .then(({ imageDataUrl }) => {
+          if (isCanceled) {
+            return
+          }
+
+          setRouteSnapshots((current) => ({
+            ...current,
+            [snapshotRecord.id]: imageDataUrl,
+          }))
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (!isCanceled) {
+            setLoadingRouteSnapshotId(null)
+          }
+        })
+    }, ROUTE_SNAPSHOT_DEBOUNCE_MS)
 
     return () => {
       isCanceled = true
-      window.clearTimeout(loadingTimerId)
+      window.clearTimeout(snapshotTimerId)
     }
   }, [activeTab, isNativePlatform, routeSnapshots, selectedRecord])
 

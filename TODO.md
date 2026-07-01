@@ -234,6 +234,7 @@ MVP 제외:
 - [x] 기록 페이지 필터와 정렬 1차 구현: 메모 검색, 월별, 거리·시간·페이스 정렬
 - [x] 기록 메모 검색 debounce 적용
 - [x] 기록 상세 경로: 카드 내부 SVG 경로 렌더링과 GPS 포인트 수집 보강
+- [x] 기록 상세 Apple MapKit snapshot debounce, 좌표 샘플링, JPEG 압축으로 클릭 멈춤 완화
 - [x] 러닝 경로 포인트 수집 빈도 개선: 1초 샘플링과 더 낮은 이동 거리 기준 적용
 - [x] 러닝 중 홈 지도 현재 위치 이동, 시설 필터, 현재 영역 재검색 유지
 - [x] Capacitor iOS native background location 브릿지 1차 구현
