@@ -28,6 +28,7 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
         super.capacitorDidLoad()
 
         installEmbeddedMap()
+        bridge?.registerPluginInstance(BackgroundLocationPlugin())
         bridge?.registerPluginInstance(NativeMapPlugin())
     }
 

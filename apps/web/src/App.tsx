@@ -122,6 +122,10 @@ function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
 
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 function sumDistanceSince(records: RunRecord[], startDate: Date) {
   return records.reduce((sum, record) => {
     const savedAt = new Date(record.savedAt)
@@ -143,6 +147,31 @@ function formatAveragePace(records: RunRecord[]) {
   const totalElapsedMs = records.reduce((sum, record) => sum + record.elapsedMs, 0)
 
   return formatPace(totalElapsedMs, totalDistanceM)
+}
+
+function getAveragePaceMinutes(records: RunRecord[]) {
+  const totalDistanceM = records.reduce((sum, record) => sum + record.distanceM, 0)
+  const totalElapsedMs = records.reduce((sum, record) => sum + record.elapsedMs, 0)
+
+  if (totalDistanceM <= 0) {
+    return 0
+  }
+
+  return totalElapsedMs / (totalDistanceM / 1000) / 1000 / 60
+}
+
+function getDaysSinceLatestRecord(records: RunRecord[], now: Date) {
+  if (!records[0]) {
+    return 0
+  }
+
+  const latestSavedAt = new Date(records[0].savedAt)
+  const dayMs = 1000 * 60 * 60 * 24
+
+  return Math.max(
+    0,
+    Math.floor((startOfDay(now).getTime() - startOfDay(latestSavedAt).getTime()) / dayMs),
+  )
 }
 
 function getMonthlyDistanceSeries(records: RunRecord[]) {
@@ -185,23 +214,50 @@ function getGoalComparisonSeries(
   ]
 }
 
-function getRunningCalendarDays(records: RunRecord[]) {
-  const currentMonth = startOfMonth(new Date())
+function getRunningCalendarMonth(offset: number) {
+  const now = new Date()
+
+  return startOfMonth(new Date(now.getFullYear(), now.getMonth() + offset, 1))
+}
+
+function getRunningCalendarDays(records: RunRecord[], monthDate: Date) {
+  const currentMonth = startOfMonth(monthDate)
   const runningDays = new Set(
     records
       .filter((record) => new Date(record.savedAt) >= currentMonth)
+      .filter((record) => {
+        const savedAt = new Date(record.savedAt)
+
+        return (
+          savedAt.getFullYear() === currentMonth.getFullYear() &&
+          savedAt.getMonth() === currentMonth.getMonth()
+        )
+      })
       .map((record) => new Date(record.savedAt).getDate()),
   )
+  const leadingEmptyDays = currentMonth.getDay()
   const daysInMonth = new Date(
     currentMonth.getFullYear(),
     currentMonth.getMonth() + 1,
     0,
   ).getDate()
 
-  return Array.from({ length: daysInMonth }, (_, index) => ({
-    day: index + 1,
-    hasRun: runningDays.has(index + 1),
-  }))
+  return [
+    ...Array.from({ length: leadingEmptyDays }, (_, index) => ({
+      day: null,
+      hasRun: false,
+      id: `empty-${index}`,
+    })),
+    ...Array.from({ length: daysInMonth }, (_, index) => ({
+      day: index + 1,
+      hasRun: runningDays.has(index + 1),
+      id: `day-${index + 1}`,
+    })),
+  ]
+}
+
+function formatCalendarMonth(monthDate: Date) {
+  return `${monthDate.getFullYear()}년 ${monthDate.getMonth() + 1}월`
 }
 
 function getRecordMonthKey(record: RunRecord) {
@@ -336,6 +392,8 @@ function App() {
   const [recordSortKey, setRecordSortKey] = useState<RecordSortKey>('date')
   const [routeSnapshots, setRouteSnapshots] = useState<Record<string, string>>({})
   const [loadingRouteSnapshotId, setLoadingRouteSnapshotId] = useState<string | null>(null)
+  const [isGoalSummaryOpen, setIsGoalSummaryOpen] = useState(true)
+  const [calendarMonthOffset, setCalendarMonthOffset] = useState(0)
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
     readRunRecords(RUN_RECORDS_STORAGE_KEY),
   )
@@ -438,6 +496,8 @@ function App() {
     null,
   )
   const averagePace = formatAveragePace(runRecords)
+  const averagePaceMinutes = getAveragePaceMinutes(runRecords)
+  const daysSinceLatestRecord = getDaysSinceLatestRecord(runRecords, now)
   const weeklyProgress = formatGoalProgress(
     weeklyDistanceM,
     runGoals.weeklyDistanceKm,
@@ -452,7 +512,40 @@ function App() {
     monthlyDistanceM,
     runGoals,
   )
-  const runningCalendarDays = getRunningCalendarDays(runRecords)
+  const runningCalendarMonth = getRunningCalendarMonth(calendarMonthOffset)
+  const runningCalendarDays = getRunningCalendarDays(runRecords, runningCalendarMonth)
+  const dashboardSummarySeries = [
+    {
+      display: `${runRecords.length}개`,
+      label: '총 횟수',
+      value: runRecords.length,
+    },
+    {
+      display: formatDistance(totalDistanceM),
+      label: '총 거리',
+      value: totalDistanceM / 1000,
+    },
+    {
+      display: formatDistance(monthlyDistanceM),
+      label: '월간',
+      value: monthlyDistanceM / 1000,
+    },
+    {
+      display: longestRecord ? formatDistance(longestRecord.distanceM) : '0.00 km',
+      label: '최장',
+      value: (longestRecord?.distanceM ?? 0) / 1000,
+    },
+    {
+      display: averagePace,
+      label: '평균 페이스',
+      value: averagePaceMinutes,
+    },
+    {
+      display: runRecords[0] ? `${daysSinceLatestRecord}일 전` : '아직 없음',
+      label: '최근 기록',
+      value: runRecords[0] ? Math.max(0.25, daysSinceLatestRecord) : 0,
+    },
+  ]
   const distanceChartWidth = 280
   const distanceChartHeight = 150
   const distanceChartPadding = {
@@ -488,6 +581,22 @@ function App() {
     ])
     .nice()
     .range([goalChartPadding.left, goalChartWidth - goalChartPadding.right])
+  const summaryChartWidth = 280
+  const summaryChartHeight = 190
+  const summaryChartPadding = {
+    bottom: 24,
+    left: 76,
+    right: 12,
+    top: 12,
+  }
+  const summaryYScale = scaleBand<string>()
+    .domain(dashboardSummarySeries.map((item) => item.label))
+    .range([summaryChartPadding.top, summaryChartHeight - summaryChartPadding.bottom])
+    .padding(0.28)
+  const summaryXScale = scaleLinear()
+    .domain([0, max(dashboardSummarySeries, (item) => item.value) || 1])
+    .nice()
+    .range([summaryChartPadding.left, summaryChartWidth - summaryChartPadding.right])
   const selectedRoutePath = selectedRecord?.routePoints
     ? getRoutePathData(selectedRecord.routePoints, selectedRecord.distanceM)
     : null
@@ -1204,9 +1313,18 @@ function App() {
           </section>
 
           <section className="dashboard-section" aria-label="러닝 목표">
-            <div className="section-heading">
-              <p className="result-label">GOALS</p>
-              <h2>목표 설정과 진행률</h2>
+            <div className="section-heading section-heading-with-action">
+              <div>
+                <p className="result-label">GOALS</p>
+                <h2>목표 설정과 진행률</h2>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsGoalSummaryOpen((current) => !current)}
+              >
+                {isGoalSummaryOpen ? '요약 닫기' : '요약 차트'}
+              </Button>
             </div>
 
             <div className="goal-inputs">
@@ -1264,6 +1382,56 @@ function App() {
                 <small>{monthlyProgress}% 달성</small>
               </article>
             </div>
+
+            {isGoalSummaryOpen && (
+              <div className="dashboard-summary-chart">
+                <div>
+                  <strong>러닝 요약</strong>
+                  <span>주요 기록을 D3 막대 그래프로 빠르게 확인해요.</span>
+                </div>
+                <svg
+                  className="summary-chart-svg"
+                  role="img"
+                  aria-label="총 러닝 횟수, 총 거리, 월간 거리, 최장 러닝, 평균 페이스, 최근 기록 요약 그래프"
+                  viewBox={`0 0 ${summaryChartWidth} ${summaryChartHeight}`}
+                >
+                  {dashboardSummarySeries.map((item) => {
+                    const y = summaryYScale(item.label) ?? 0
+                    const barHeight = summaryYScale.bandwidth()
+
+                    return (
+                      <g key={item.label}>
+                        <text
+                          className="chart-axis-label"
+                          x="8"
+                          y={y + barHeight / 2 + 4}
+                        >
+                          {item.label}
+                        </text>
+                        <rect
+                          x={summaryChartPadding.left}
+                          y={y}
+                          width={Math.max(
+                            item.value > 0 ? 8 : 0,
+                            summaryXScale(item.value) - summaryChartPadding.left,
+                          )}
+                          height={barHeight}
+                          rx="7"
+                        />
+                        <text
+                          className="chart-value-label"
+                          x={summaryChartWidth - summaryChartPadding.right}
+                          y={y + barHeight / 2 + 4}
+                          textAnchor="end"
+                        >
+                          {item.display}
+                        </text>
+                      </g>
+                    )
+                  })}
+                </svg>
+              </div>
+            )}
           </section>
 
           <section className="dashboard-section" aria-label="월간 거리 그래프">
@@ -1364,19 +1532,43 @@ function App() {
           </section>
 
           <section className="dashboard-section" aria-label="러닝 달력">
-            <div className="section-heading">
-              <p className="result-label">CALENDAR</p>
-              <h2>이번 달 러닝 날짜</h2>
+            <div className="section-heading section-heading-with-action">
+              <div>
+                <p className="result-label">CALENDAR</p>
+                <h2>러닝 날짜</h2>
+              </div>
+              <div className="calendar-controls" aria-label="달력 월 이동">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCalendarMonthOffset((current) => current - 1)}
+                >
+                  이전
+                </Button>
+                <strong>{formatCalendarMonth(runningCalendarMonth)}</strong>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCalendarMonthOffset((current) => current + 1)}
+                >
+                  다음
+                </Button>
+              </div>
             </div>
             <div className="running-calendar">
               {runningCalendarDays.map((item) => (
                 <span
-                  key={item.day}
-                  className={item.hasRun ? 'has-run' : ''}
+                  key={item.id}
+                  className={`${item.day === null ? 'is-empty' : ''} ${
+                    item.hasRun ? 'has-run' : ''
+                  }`}
+                  aria-hidden={item.day === null}
                   aria-label={
-                    item.hasRun
-                      ? `${item.day}일 러닝 기록 있음`
-                      : `${item.day}일 러닝 기록 없음`
+                    item.day === null
+                      ? undefined
+                      : item.hasRun
+                        ? `${item.day}일 러닝 기록 있음`
+                        : `${item.day}일 러닝 기록 없음`
                   }
                 >
                   {item.day}
@@ -1399,7 +1591,6 @@ function App() {
           </section>
         </section>
       )}
-
       {isRunningSessionActive && (
         <section
           className={`running-panel ${running.status === 'finished' ? 'is-result' : ''}`}

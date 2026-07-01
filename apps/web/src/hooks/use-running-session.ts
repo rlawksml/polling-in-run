@@ -1,4 +1,6 @@
+import { Capacitor } from '@capacitor/core'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { BackgroundLocation } from '../lib/background-location'
 
 export type RunningStatus = 'idle' | 'running' | 'paused' | 'finished'
 export type RunTrackingStatus =
@@ -45,7 +47,7 @@ function getTrackingStartState(): Pick<
   RunningSession,
   'trackingError' | 'trackingStatus'
 > {
-  if (!navigator.geolocation?.watchPosition) {
+  if (!Capacitor.isNativePlatform() && !navigator.geolocation?.watchPosition) {
     return {
       trackingError: '이 브라우저는 실시간 위치 추적을 지원하지 않아요.',
       trackingStatus: 'unsupported',
@@ -173,32 +175,86 @@ export function useRunningSession() {
       return
     }
 
-    if (
-      !navigator.geolocation?.watchPosition ||
-      session.trackingStatus === 'unsupported'
-    ) {
+    if (session.trackingStatus === 'unsupported') {
       return
     }
 
-    const handlePosition = ({ coords, timestamp }: GeolocationPosition) => {
-      if (coords.accuracy > MAX_TRACKING_ACCURACY_M) {
+    const handleLocationPoint = (point: RunLocationPoint) => {
+      if (point.accuracy > MAX_TRACKING_ACCURACY_M) {
         setSession((current) => ({
           ...current,
           trackingError: `GPS 정확도가 낮아 이번 좌표는 제외했어요. (${Math.round(
-            coords.accuracy,
+            point.accuracy,
           )}m)`,
         }))
         return
       }
 
-      const nextPoint = {
+      setSession((current) => appendRoutePoint(current, point))
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      let isDisposed = false
+      let removeNativeListener: (() => Promise<void>) | null = null
+
+      void BackgroundLocation.addListener('location', handleLocationPoint)
+        .then((listener) => {
+          if (isDisposed) {
+            void listener.remove()
+            return
+          }
+
+          removeNativeListener = () => listener.remove()
+        })
+        .catch((error) => {
+          setSession((current) => ({
+            ...current,
+            trackingError:
+              error instanceof Error
+                ? error.message
+                : '네이티브 위치 이벤트를 연결하지 못했어요.',
+            trackingStatus: 'error',
+          }))
+        })
+
+      void BackgroundLocation.start().then(({ status }) => {
+        if (status === 'denied') {
+          setSession((current) => ({
+            ...current,
+            trackingError:
+              'iPhone 위치 권한이 꺼져 있어요. 설정에서 항상 허용을 확인해주세요.',
+            trackingStatus: 'error',
+          }))
+        }
+      }).catch((error) => {
+        setSession((current) => ({
+          ...current,
+          trackingError:
+            error instanceof Error
+              ? error.message
+              : '백그라운드 위치 추적을 시작하지 못했어요.',
+          trackingStatus: 'error',
+        }))
+      })
+
+      return () => {
+        isDisposed = true
+        void removeNativeListener?.()
+        void BackgroundLocation.stop().catch(() => undefined)
+      }
+    }
+
+    if (!navigator.geolocation?.watchPosition) {
+      return
+    }
+
+    const handlePosition = ({ coords, timestamp }: GeolocationPosition) => {
+      handleLocationPoint({
         accuracy: coords.accuracy,
         latitude: coords.latitude,
         longitude: coords.longitude,
         timestamp,
-      }
-
-      setSession((current) => appendRoutePoint(current, nextPoint))
+      })
     }
 
     const watchId = navigator.geolocation.watchPosition(

@@ -708,15 +708,18 @@ describe('App', () => {
     expect(screen.getByText('내 iPhone에 저장하는 러닝 노트')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Solo Runner' })).toBeInTheDocument()
     expect(screen.getByText('총 러닝 횟수')).toBeInTheDocument()
-    expect(screen.getByText('2개')).toBeInTheDocument()
+    expect(screen.getAllByText('2개').length).toBeGreaterThan(0)
     expect(screen.getByText('총 뛴 거리')).toBeInTheDocument()
     expect(screen.getAllByText('4.20 km').length).toBeGreaterThan(0)
     expect(screen.getByText('최장 러닝')).toBeInTheDocument()
-    expect(screen.getByText('3.00 km')).toBeInTheDocument()
+    expect(screen.getAllByText('3.00 km').length).toBeGreaterThan(0)
     expect(screen.getByText('목표 설정과 진행률')).toBeInTheDocument()
+    expect(screen.getByText('러닝 요약')).toBeInTheDocument()
     expect(screen.getByText('D3 최근 4개월 거리')).toBeInTheDocument()
     expect(screen.getByText('D3 목표 대비 비교')).toBeInTheDocument()
-    expect(screen.getByText('이번 달 러닝 날짜')).toBeInTheDocument()
+    expect(screen.getByText('러닝 날짜')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '이전' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다음' })).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('주간 목표'), {
       target: { value: '15' },
