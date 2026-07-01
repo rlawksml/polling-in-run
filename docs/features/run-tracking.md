@@ -15,8 +15,9 @@
 
 ## 단점과 위험
 
-- 화면이 꺼지거나 브라우저가 백그라운드로 이동하면 추적이 중단될 수 있다.
-- Capacitor WebView에서도 별도 native background location 구현 없이는 다른 앱 사용 중 기록을 안정적으로 보장하기 어렵다.
+- 웹 브라우저만 사용할 때는 화면이 꺼지거나 브라우저가 백그라운드로 이동하면 추적이 중단될 수 있다.
+- Capacitor iOS 앱에서는 native background location 브릿지를 통해 WebView 대신 `CLLocationManager`가 좌표를 수집하는 1차 구현을 추가했다.
+- 단, iOS 실기기에서 위치 권한을 `항상 허용`으로 승인하고 화면 잠금·앱 전환 상태를 검증해야 NRC/Adidas Running에 가까운 안정성을 판단할 수 있다.
 - GPS 오차로 실제보다 긴 경로가 기록될 수 있다.
 - 지속적인 고정밀 위치 추적은 배터리를 많이 사용한다.
 
@@ -50,8 +51,9 @@
 ### 2026-06-24
 
 - 현재 러닝 추적은 앱이 foreground에 있고 화면이 켜진 상태를 우선 지원 범위로 둔다.
-- 다른 앱을 사용하거나 화면이 잠긴 상태의 백그라운드 기록은 아직 구현하지 않았다.
-- 안정적인 백그라운드 기록이 필요하면 iOS native background location 권한, 별도 위치 추적 플러그인, 배터리·개인정보 안내를 함께 설계한다.
+- iOS native background location 브릿지를 추가했다.
+- `BackgroundLocationPlugin`은 `CLLocationManager`를 사용하고, `UIBackgroundModes: location`과 항상 위치 권한 문구를 `Info.plist`에 추가했다.
+- React 러닝 훅은 Capacitor native 환경에서 브라우저 `navigator.geolocation`보다 native plugin 이벤트를 우선 사용한다.
 
 ### 2026-06-30
 
@@ -64,10 +66,12 @@
 - 경로 표시용 포인트 저장 기준과 누적 거리 계산 기준을 분리했다.
 - 0.15m 이상 좌표 변화는 경로 모양을 위해 저장하고, 0.75m 이상 이동만 누적 거리에 더한다.
 - 짧은 코너와 방향 전환 좌표를 더 잘 보존하되, GPS 미세 흔들림이 거리로 과도하게 더해지는 것을 줄인다.
+- Capacitor iOS용 `BackgroundLocation` 브릿지를 추가해 화면 잠금·앱 전환 중에도 native 위치 이벤트를 받을 수 있는 기반을 마련했다.
+- 남은 검증은 Xcode 실기기에서 `항상 허용` 권한, 화면 잠금, 다른 앱 전환, 러닝 종료 후 기록 저장까지 확인하는 것이다.
 
 ## 재검토 조건
 
-NRC나 Adidas Running 수준의 백그라운드 추적이 필수라면 Capacitor native plugin, React Native, 또는 네이티브 앱 전환을 검토한다.
+NRC나 Adidas Running 수준의 백그라운드 추적 품질을 목표로 한다면 현재 native bridge를 실기기에서 검증한 뒤, 배터리 소모, 위치 권한 안내, 앱 심사 문구, 장거리 기록 누락 여부를 추가로 점검한다.
 
 ## 완료 조건
 

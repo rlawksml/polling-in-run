@@ -69,7 +69,7 @@ VITE_API_BASE_URL=http://192.168.45.3:8000
 - Kakao Maps JavaScript SDK는 Capacitor 정적 앱의 `capacitor://localhost` origin에서 안정적으로 쓰기 어렵다.
 - 로컬 FastAPI 서버를 iPhone에서 접근하려면 PC와 iPhone이 같은 네트워크에 있어야 한다.
 - 인증 기능은 현재 MVP 필수 범위가 아니며, Supabase service role key는 확장 실험 시에도 FastAPI `.env`에만 둔다.
-- Capacitor 앱의 백그라운드 위치 추적은 이번 PR 범위가 아니다.
+- Capacitor 앱의 백그라운드 위치 추적은 native bridge 1차 구현이 들어갔고, 실기기에서 `항상 허용` 권한과 화면 잠금·앱 전환 중 좌표 수집을 별도로 검증해야 한다.
 
 ## 다음 결정
 

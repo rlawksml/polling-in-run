@@ -5,6 +5,123 @@ import MapKit
 import UIKit
 import Capacitor
 
+@objc(BackgroundLocationPlugin)
+public class BackgroundLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelegate {
+    public let identifier = "BackgroundLocationPlugin"
+    public let jsName = "BackgroundLocation"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise)
+    ]
+
+    private let locationManager = CLLocationManager()
+    private var isTracking = false
+
+    public override func load() {
+        locationManager.delegate = self
+        locationManager.activityType = .fitness
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = 1
+        locationManager.pausesLocationUpdatesAutomatically = false
+    }
+
+    @objc func start(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                call.reject("BackgroundLocation plugin is not available")
+                return
+            }
+
+            guard CLLocationManager.locationServicesEnabled() else {
+                call.resolve(["status": "denied"])
+                return
+            }
+
+            self.isTracking = true
+            let status = self.authorizationStatus()
+
+            if status == .notDetermined {
+                self.locationManager.requestAlwaysAuthorization()
+                call.resolve(["status": "requesting"])
+                return
+            }
+
+            if status == .authorizedWhenInUse {
+                self.locationManager.requestAlwaysAuthorization()
+            }
+
+            guard status == .authorizedAlways || status == .authorizedWhenInUse else {
+                call.resolve(["status": "denied"])
+                return
+            }
+
+            self.startUpdatingLocation()
+            call.resolve([
+                "status": status == .authorizedAlways ? "tracking" : "tracking-limited"
+            ])
+        }
+    }
+
+    @objc func stop(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isTracking = false
+            self?.locationManager.stopUpdatingLocation()
+            call.resolve()
+        }
+    }
+
+    public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard isTracking else {
+            return
+        }
+
+        let status = authorizationStatus()
+
+        if status == .authorizedAlways || status == .authorizedWhenInUse {
+            startUpdatingLocation()
+        }
+    }
+
+    public func locationManager(
+        _ manager: CLLocationManager,
+        didUpdateLocations locations: [CLLocation]
+    ) {
+        locations
+            .filter { $0.horizontalAccuracy >= 0 }
+            .forEach { location in
+                notifyListeners("location", data: [
+                    "accuracy": location.horizontalAccuracy,
+                    "latitude": location.coordinate.latitude,
+                    "longitude": location.coordinate.longitude,
+                    "timestamp": location.timestamp.timeIntervalSince1970 * 1000
+                ])
+            }
+    }
+
+    public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        notifyListeners("error", data: [
+            "message": error.localizedDescription
+        ])
+    }
+
+    private func startUpdatingLocation() {
+        if Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") != nil {
+            locationManager.allowsBackgroundLocationUpdates = true
+            locationManager.showsBackgroundLocationIndicator = true
+        }
+
+        locationManager.startUpdatingLocation()
+    }
+
+    private func authorizationStatus() -> CLAuthorizationStatus {
+        if #available(iOS 14.0, *) {
+            return locationManager.authorizationStatus
+        }
+
+        return CLLocationManager.authorizationStatus()
+    }
+}
+
 @objc(NativeMapPlugin)
 public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "NativeMapPlugin"
