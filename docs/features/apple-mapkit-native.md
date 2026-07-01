@@ -165,6 +165,7 @@ export const NativeMap = registerPlugin<NativeMapPlugin>('NativeMap')
 - `MainViewController.swift`에서 `CAPBridgeViewController.capacitorDidLoad()` 시점에 `NativeMapPlugin`을 명시 등록한다.
 - `MainViewController.swift`에서 `MKMapView`를 WebView 아래에 깔고, React의 `NativeMap.sync(...)` 호출로 현재 위치와 시설 annotation을 동기화한다.
 - embedded native map은 현재 위치 표시와 음수대/화장실 annotation을 제공한다.
+- 현재 위치 annotation은 기본 파란 점 대신 `figure.run.circle.fill` SF Symbol을 사용해 러닝 중 내 위치를 더 명확하게 표시한다.
 - React 홈 화면에서는 iOS native platform일 때 KakaoMap 컴포넌트를 렌더링하지 않고 Apple MapKit 배경 지도를 사용한다.
 - React는 현재 표시 중인 시설을 최대 300개까지만 native 화면으로 넘긴다.
 - React는 `NativeMap.setTouchAreas(...)`로 버튼, 카드, 탭바의 viewport 좌표를 Swift에 넘긴다.

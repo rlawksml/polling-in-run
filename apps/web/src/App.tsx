@@ -62,6 +62,11 @@ const DEFAULT_RUN_GOALS = {
 
 type AppTab = 'home' | 'records' | 'my'
 type RecordSortKey = 'date' | 'distance' | 'duration' | 'pace'
+type GoalInsightKey =
+  | 'weekly-target'
+  | 'monthly-target'
+  | 'weekly-progress'
+  | 'monthly-progress'
 
 type RunRecord = {
   distanceM: number
@@ -75,6 +80,30 @@ type RunRecord = {
 }
 
 type RunGoals = typeof DEFAULT_RUN_GOALS
+
+function NavigationIcon({ tab }: { tab: AppTab }) {
+  if (tab === 'home') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M3 11.2 12 4l9 7.2v8.3a.5.5 0 0 1-.5.5H15v-5.5H9V20H3.5a.5.5 0 0 1-.5-.5z" />
+      </svg>
+    )
+  }
+
+  if (tab === 'records') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M6 3.5h12a1 1 0 0 1 1 1v15a1 1 0 0 1-1.5.86L12 17.2l-5.5 3.16A1 1 0 0 1 5 19.5v-15a1 1 0 0 1 1-1zm2.5 5h7v2h-7zm0 4h5v2h-5z" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M12 12.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-8 7.8c.7-3.8 3.8-6.3 8-6.3s7.3 2.5 8 6.3a.6.6 0 0 1-.6.7H4.6a.6.6 0 0 1-.6-.7z" />
+    </svg>
+  )
+}
 
 function readRunRecords(storageKey: string): RunRecord[] {
   try {
@@ -122,10 +151,6 @@ function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
 
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
 function sumDistanceSince(records: RunRecord[], startDate: Date) {
   return records.reduce((sum, record) => {
     const savedAt = new Date(record.savedAt)
@@ -147,31 +172,6 @@ function formatAveragePace(records: RunRecord[]) {
   const totalElapsedMs = records.reduce((sum, record) => sum + record.elapsedMs, 0)
 
   return formatPace(totalElapsedMs, totalDistanceM)
-}
-
-function getAveragePaceMinutes(records: RunRecord[]) {
-  const totalDistanceM = records.reduce((sum, record) => sum + record.distanceM, 0)
-  const totalElapsedMs = records.reduce((sum, record) => sum + record.elapsedMs, 0)
-
-  if (totalDistanceM <= 0) {
-    return 0
-  }
-
-  return totalElapsedMs / (totalDistanceM / 1000) / 1000 / 60
-}
-
-function getDaysSinceLatestRecord(records: RunRecord[], now: Date) {
-  if (!records[0]) {
-    return 0
-  }
-
-  const latestSavedAt = new Date(records[0].savedAt)
-  const dayMs = 1000 * 60 * 60 * 24
-
-  return Math.max(
-    0,
-    Math.floor((startOfDay(now).getTime() - startOfDay(latestSavedAt).getTime()) / dayMs),
-  )
 }
 
 function getMonthlyDistanceSeries(records: RunRecord[]) {
@@ -392,7 +392,8 @@ function App() {
   const [recordSortKey, setRecordSortKey] = useState<RecordSortKey>('date')
   const [routeSnapshots, setRouteSnapshots] = useState<Record<string, string>>({})
   const [loadingRouteSnapshotId, setLoadingRouteSnapshotId] = useState<string | null>(null)
-  const [isGoalSummaryOpen, setIsGoalSummaryOpen] = useState(true)
+  const [selectedGoalInsight, setSelectedGoalInsight] =
+    useState<GoalInsightKey>('weekly-progress')
   const [calendarMonthOffset, setCalendarMonthOffset] = useState(0)
   const [runRecords, setRunRecords] = useState<RunRecord[]>(() =>
     readRunRecords(RUN_RECORDS_STORAGE_KEY),
@@ -496,8 +497,6 @@ function App() {
     null,
   )
   const averagePace = formatAveragePace(runRecords)
-  const averagePaceMinutes = getAveragePaceMinutes(runRecords)
-  const daysSinceLatestRecord = getDaysSinceLatestRecord(runRecords, now)
   const weeklyProgress = formatGoalProgress(
     weeklyDistanceM,
     runGoals.weeklyDistanceKm,
@@ -514,38 +513,61 @@ function App() {
   )
   const runningCalendarMonth = getRunningCalendarMonth(calendarMonthOffset)
   const runningCalendarDays = getRunningCalendarDays(runRecords, runningCalendarMonth)
-  const dashboardSummarySeries = [
+  const goalInsightOptions = [
     {
-      display: `${runRecords.length}개`,
-      label: '총 횟수',
-      value: runRecords.length,
+      actualKm: runGoals.weeklyDistanceKm,
+      description: '이번 주에 도달하고 싶은 기준 거리예요.',
+      display: `${runGoals.weeklyDistanceKm} km`,
+      goalKm: runGoals.weeklyDistanceKm,
+      key: 'weekly-target',
+      label: '주간 목표',
+      tone: 'target',
     },
     {
-      display: formatDistance(totalDistanceM),
-      label: '총 거리',
-      value: totalDistanceM / 1000,
+      actualKm: runGoals.monthlyDistanceKm,
+      description: '이번 달 전체 러닝 목표 거리예요.',
+      display: `${runGoals.monthlyDistanceKm} km`,
+      goalKm: runGoals.monthlyDistanceKm,
+      key: 'monthly-target',
+      label: '월간 목표',
+      tone: 'target',
     },
     {
+      actualKm: weeklyDistanceM / 1000,
+      description: `${weeklyProgress}% 달성했어요. 목표까지 ${Math.max(
+        0,
+        runGoals.weeklyDistanceKm - weeklyDistanceM / 1000,
+      ).toFixed(1)} km 남았어요.`,
+      display: formatDistance(weeklyDistanceM),
+      goalKm: runGoals.weeklyDistanceKm,
+      key: 'weekly-progress',
+      label: '이번 주',
+      tone: 'progress',
+    },
+    {
+      actualKm: monthlyDistanceM / 1000,
+      description: `${monthlyProgress}% 달성했어요. 목표까지 ${Math.max(
+        0,
+        runGoals.monthlyDistanceKm - monthlyDistanceM / 1000,
+      ).toFixed(1)} km 남았어요.`,
       display: formatDistance(monthlyDistanceM),
-      label: '월간',
-      value: monthlyDistanceM / 1000,
+      goalKm: runGoals.monthlyDistanceKm,
+      key: 'monthly-progress',
+      label: '이번 달',
+      tone: 'progress',
     },
-    {
-      display: longestRecord ? formatDistance(longestRecord.distanceM) : '0.00 km',
-      label: '최장',
-      value: (longestRecord?.distanceM ?? 0) / 1000,
-    },
-    {
-      display: averagePace,
-      label: '평균 페이스',
-      value: averagePaceMinutes,
-    },
-    {
-      display: runRecords[0] ? `${daysSinceLatestRecord}일 전` : '아직 없음',
-      label: '최근 기록',
-      value: runRecords[0] ? Math.max(0.25, daysSinceLatestRecord) : 0,
-    },
-  ]
+  ] satisfies Array<{
+    actualKm: number
+    description: string
+    display: string
+    goalKm: number
+    key: GoalInsightKey
+    label: string
+    tone: 'progress' | 'target'
+  }>
+  const activeGoalInsight =
+    goalInsightOptions.find((item) => item.key === selectedGoalInsight) ??
+    goalInsightOptions[0]
   const distanceChartWidth = 280
   const distanceChartHeight = 150
   const distanceChartPadding = {
@@ -581,22 +603,23 @@ function App() {
     ])
     .nice()
     .range([goalChartPadding.left, goalChartWidth - goalChartPadding.right])
-  const summaryChartWidth = 280
-  const summaryChartHeight = 190
-  const summaryChartPadding = {
-    bottom: 24,
-    left: 76,
-    right: 12,
-    top: 12,
+  const insightChartWidth = 280
+  const insightChartHeight = 128
+  const insightChartPadding = {
+    bottom: 34,
+    left: 20,
+    right: 20,
+    top: 24,
   }
-  const summaryYScale = scaleBand<string>()
-    .domain(dashboardSummarySeries.map((item) => item.label))
-    .range([summaryChartPadding.top, summaryChartHeight - summaryChartPadding.bottom])
-    .padding(0.28)
-  const summaryXScale = scaleLinear()
-    .domain([0, max(dashboardSummarySeries, (item) => item.value) || 1])
+  const insightMaxKm = Math.max(
+    activeGoalInsight.goalKm,
+    activeGoalInsight.actualKm,
+    1,
+  )
+  const insightXScale = scaleLinear()
+    .domain([0, insightMaxKm])
     .nice()
-    .range([summaryChartPadding.left, summaryChartWidth - summaryChartPadding.right])
+    .range([insightChartPadding.left, insightChartWidth - insightChartPadding.right])
   const selectedRoutePath = selectedRecord?.routePoints
     ? getRoutePathData(selectedRecord.routePoints, selectedRecord.distanceM)
     : null
@@ -1313,18 +1336,12 @@ function App() {
           </section>
 
           <section className="dashboard-section" aria-label="러닝 목표">
-            <div className="section-heading section-heading-with-action">
-              <div>
-                <p className="result-label">GOALS</p>
-                <h2>목표 설정과 진행률</h2>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsGoalSummaryOpen((current) => !current)}
-              >
-                {isGoalSummaryOpen ? '요약 닫기' : '요약 차트'}
-              </Button>
+            <div className="section-heading">
+              <p className="result-label">GOALS</p>
+              <h2>목표 설정과 진행률</h2>
+              <p className="section-description">
+                보고 싶은 항목을 누르면 아래 차트가 해당 기준으로 바뀌어요.
+              </p>
             </div>
 
             <div className="goal-inputs">
@@ -1356,82 +1373,94 @@ function App() {
               </label>
             </div>
 
-            <div className="progress-list" aria-label="목표 대비 진행률">
-              <article>
-                <div>
-                  <strong>이번 주</strong>
-                  <span>
-                    {formatDistance(weeklyDistanceM)} / {runGoals.weeklyDistanceKm} km
-                  </span>
-                </div>
-                <div className="progress-track">
-                  <span style={{ width: `${weeklyProgress}%` }} />
-                </div>
-                <small>{weeklyProgress}% 달성</small>
-              </article>
-              <article>
-                <div>
-                  <strong>이번 달</strong>
-                  <span>
-                    {formatDistance(monthlyDistanceM)} / {runGoals.monthlyDistanceKm} km
-                  </span>
-                </div>
-                <div className="progress-track">
-                  <span style={{ width: `${monthlyProgress}%` }} />
-                </div>
-                <small>{monthlyProgress}% 달성</small>
-              </article>
+            <div className="goal-insight-grid" aria-label="목표 차트 선택">
+              {goalInsightOptions.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={item.key === activeGoalInsight.key ? 'is-active' : ''}
+                  aria-label={`${item.label} 차트 보기 ${item.display}`}
+                  aria-pressed={item.key === activeGoalInsight.key}
+                  onClick={() => setSelectedGoalInsight(item.key)}
+                >
+                  <span>{item.label}</span>
+                  <strong>{item.display}</strong>
+                </button>
+              ))}
             </div>
 
-            {isGoalSummaryOpen && (
-              <div className="dashboard-summary-chart">
-                <div>
-                  <strong>러닝 요약</strong>
-                  <span>주요 기록을 D3 막대 그래프로 빠르게 확인해요.</span>
-                </div>
-                <svg
-                  className="summary-chart-svg"
-                  role="img"
-                  aria-label="총 러닝 횟수, 총 거리, 월간 거리, 최장 러닝, 평균 페이스, 최근 기록 요약 그래프"
-                  viewBox={`0 0 ${summaryChartWidth} ${summaryChartHeight}`}
-                >
-                  {dashboardSummarySeries.map((item) => {
-                    const y = summaryYScale(item.label) ?? 0
-                    const barHeight = summaryYScale.bandwidth()
-
-                    return (
-                      <g key={item.label}>
-                        <text
-                          className="chart-axis-label"
-                          x="8"
-                          y={y + barHeight / 2 + 4}
-                        >
-                          {item.label}
-                        </text>
-                        <rect
-                          x={summaryChartPadding.left}
-                          y={y}
-                          width={Math.max(
-                            item.value > 0 ? 8 : 0,
-                            summaryXScale(item.value) - summaryChartPadding.left,
-                          )}
-                          height={barHeight}
-                          rx="7"
-                        />
-                        <text
-                          className="chart-value-label"
-                          x={summaryChartWidth - summaryChartPadding.right}
-                          y={y + barHeight / 2 + 4}
-                          textAnchor="end"
-                        >
-                          {item.display}
-                        </text>
-                      </g>
-                    )
-                  })}
-                </svg>
+            <div className="goal-insight-chart">
+              <div>
+                <strong>{activeGoalInsight.label} 차트</strong>
+                <span>{activeGoalInsight.description}</span>
               </div>
-            )}
+              <svg
+                className="goal-insight-svg"
+                role="img"
+                aria-label={`${activeGoalInsight.label} 목표와 현재 거리 비교 그래프`}
+                viewBox={`0 0 ${insightChartWidth} ${insightChartHeight}`}
+              >
+                <line
+                  className="goal-insight-axis"
+                  x1={insightChartPadding.left}
+                  x2={insightChartWidth - insightChartPadding.right}
+                  y1="82"
+                  y2="82"
+                />
+                <rect
+                  className="goal-insight-target"
+                  x={insightChartPadding.left}
+                  y="44"
+                  width={
+                    insightXScale(activeGoalInsight.goalKm) - insightChartPadding.left
+                  }
+                  height="18"
+                  rx="9"
+                />
+                <rect
+                  className="goal-insight-actual"
+                  x={insightChartPadding.left}
+                  y="48"
+                  width={Math.max(
+                    activeGoalInsight.actualKm > 0 ? 8 : 0,
+                    insightXScale(activeGoalInsight.actualKm) -
+                      insightChartPadding.left,
+                  )}
+                  height="10"
+                  rx="5"
+                />
+                <circle
+                  className="goal-insight-marker"
+                  cx={insightXScale(activeGoalInsight.goalKm)}
+                  cy="53"
+                  r="5"
+                />
+                <text
+                  className="chart-axis-label"
+                  x={insightChartPadding.left}
+                  y="104"
+                >
+                  0km
+                </text>
+                <text
+                  className="chart-axis-label"
+                  x={insightChartWidth - insightChartPadding.right}
+                  y="104"
+                  textAnchor="end"
+                >
+                  목표 {activeGoalInsight.goalKm}km
+                </text>
+                <text
+                  className="chart-value-label"
+                  x={insightChartWidth / 2}
+                  y="24"
+                  textAnchor="middle"
+                >
+                  {activeGoalInsight.tone === 'target' ? '목표' : '현재'}{' '}
+                  {activeGoalInsight.actualKm.toFixed(1)}km
+                </text>
+              </svg>
+            </div>
           </section>
 
           <section className="dashboard-section" aria-label="월간 거리 그래프">
@@ -1735,25 +1764,28 @@ function App() {
             variant="ghost"
             className={activeTab === 'home' ? 'is-active' : ''}
             type="button"
+            aria-label="홈"
             onClick={() => setActiveTab('home')}
           >
-            홈
+            <NavigationIcon tab="home" />
           </Button>
           <Button
             variant="ghost"
             className={activeTab === 'records' ? 'is-active' : ''}
             type="button"
+            aria-label="기록"
             onClick={openRecordsTab}
           >
-            기록
+            <NavigationIcon tab="records" />
           </Button>
           <Button
             variant="ghost"
             className={activeTab === 'my' ? 'is-active' : ''}
             type="button"
+            aria-label="마이"
             onClick={() => setActiveTab('my')}
           >
-            마이
+            <NavigationIcon tab="my" />
           </Button>
         </nav>
       )}

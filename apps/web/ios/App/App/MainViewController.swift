@@ -117,6 +117,23 @@ final class MainViewController: CAPBridgeViewController, MKMapViewDelegate {
     }
 
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if annotation is MKUserLocation {
+            let identifier = "RunnerUserLocationAnnotation"
+            let annotationView = mapView.dequeueReusableAnnotationView(
+                withIdentifier: identifier
+            ) ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            let symbolConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .bold)
+            let symbolImage = UIImage(systemName: "figure.run.circle.fill", withConfiguration: symbolConfig)
+                ?? UIImage(systemName: "location.circle.fill", withConfiguration: symbolConfig)
+
+            annotationView.annotation = annotation
+            annotationView.canShowCallout = false
+            annotationView.centerOffset = CGPoint(x: 0, y: -8)
+            annotationView.image = symbolImage?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+
+            return annotationView
+        }
+
         guard let facilityAnnotation = annotation as? FacilityAnnotation else {
             return nil
         }
