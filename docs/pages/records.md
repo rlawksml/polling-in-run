@@ -85,6 +85,8 @@
 ### 2026-07-01
 
 - 메모 검색 input에 debounce를 적용해 입력 중마다 즉시 목록 계산이 발생하지 않게 했다.
+- iPhone 기록 상세에서 Apple MapKit snapshot을 만들 때 기록을 빠르게 누르면 native snapshot 요청이 겹쳐 화면이 멈출 수 있었다.
+- 기록 선택 후 350ms debounce를 거쳐 snapshot을 생성하고, 미리보기용 좌표를 최대 320개로 줄이며, snapshot 이미지를 480x240 JPEG로 낮춰 WebView와 MapKit 부담을 줄였다.
 
 ## 확장 후보
 

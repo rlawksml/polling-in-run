@@ -235,8 +235,8 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func createRouteSnapshot(_ call: CAPPluginCall) {
         let pointPayloads = call.getArray("points", JSObject.self) ?? []
         let points = pointPayloads.compactMap(parseRoutePoint)
-        let width = max(call.getDouble("width") ?? 720, 240)
-        let height = max(call.getDouble("height") ?? 360, 160)
+        let width = max(call.getDouble("width") ?? 480, 240)
+        let height = max(call.getDouble("height") ?? 240, 160)
         let distanceM = call.getDouble("distanceM") ?? 0
 
         guard !points.isEmpty else {
@@ -267,13 +267,13 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
                 distanceM: distanceM
             )
 
-            guard let pngData = image.pngData() else {
+            guard let imageData = image.jpegData(compressionQuality: 0.72) else {
                 call.reject("Failed to encode route snapshot")
                 return
             }
 
             call.resolve([
-                "imageDataUrl": "data:image/png;base64,\(pngData.base64EncodedString())"
+                "imageDataUrl": "data:image/jpeg;base64,\(imageData.base64EncodedString())"
             ])
         }
     }
@@ -361,7 +361,7 @@ public class NativeMapPlugin: CAPPlugin, CAPBridgedPlugin {
     ) -> MKMapSnapshotter.Options {
         let options = MKMapSnapshotter.Options()
         options.size = size
-        options.scale = UIScreen.main.scale
+        options.scale = min(UIScreen.main.scale, 2)
         options.mapType = .standard
         options.traitCollection = UITraitCollection(userInterfaceStyle: .light)
 
